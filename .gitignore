@@ -1,0 +1,23 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Application Specific
+temp_audio/
+subtitles/
+debug_log.txt
+
+# Executables & Binaries (Do not push these to GitHub!)
+ffmpeg.exe
+ffprobe.exe
+
+# Environments
+.venv/
+env/
+venv/
+ENV/
+
+# IDEs
+.vscode/
+.idea/
