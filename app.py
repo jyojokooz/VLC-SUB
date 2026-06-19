@@ -13,7 +13,7 @@ import sys
 from deep_translator import GoogleTranslator
 
 # --- CONFIGURATION ---
-MAX_TRANSLATION_WORKERS = 15 
+MAX_TRANSLATION_WORKERS = 12 # Slightly reduced to safely handle the new Romanization API without rate limits
 VLC_ORANGE = "#ff8c00"
 DARK_BG = "#121212"
 PANEL_BG = "#1e1e1e"
@@ -91,21 +91,17 @@ def detect_paired_file(filepath, file_type):
     return ""
 
 def get_available_subtitles(video_path):
-    """Scans the video's directory for available subtitles so the user can easily select them."""
     subs = []
-    # Check video directory
     if video_path and os.path.exists(video_path):
         v_dir = os.path.dirname(video_path)
         if os.path.exists(v_dir):
             for f in os.listdir(v_dir):
                 if f.lower().endswith('.srt'):
                     subs.append(os.path.normpath(os.path.join(v_dir, f)))
-    # Check generated directory
     if os.path.exists(SUB_DIR):
         for f in os.listdir(SUB_DIR):
             if f.lower().endswith('.srt'):
                 subs.append(os.path.normpath(os.path.join(SUB_DIR, f)))
-    # Return unique list
     return list(dict.fromkeys(subs))
 
 def update_status(text):
@@ -116,7 +112,7 @@ def update_progress(done, total, label=""):
     if app and progress_var: app.after(0, lambda: progress_var.set(pct))
     if label and app and progress_label: app.after(0, lambda: progress_label.config(text=f"{done}/{total} {label}"))
 
-# --- SRT PARSER & TRANSLATOR ---
+# --- SRT PARSER & SMART TRANSLATOR ---
 def parse_srt(filepath):
     with open(filepath, 'r', encoding='utf-8-sig') as f: content = f.read()
     blocks = re.split(r'\n\s*\n', content.strip())
@@ -130,14 +126,37 @@ def parse_srt(filepath):
                 parsed.append({"index": idx, "start": time_to_sec(times[0].strip()), "end": time_to_sec(times[1].strip()), "text": '\n'.join(lines[2:])})
     return parsed
 
-def translate_text(eng_text, target_code):
+def translate_text(eng_text, target_code, romanize=False):
     if target_code == "en" or not eng_text.strip(): return eng_text
-    for _ in range(3):
+    
+    for attempt in range(3):
         try:
-            res = GoogleTranslator(source='auto', target=target_code).translate(eng_text)
-            if res: return res
+            if not romanize:
+                # Standard native script translation
+                res = GoogleTranslator(source='auto', target=target_code).translate(eng_text)
+                if res: return res
+            else:
+                # Transliteration API (Manglish, Hinglish, etc.)
+                url = "https://translate.googleapis.com/translate_a/single"
+                params = {"client": "gtx", "sl": "en", "tl": target_code, "dt": ["t", "rm"], "q": eng_text}
+                resp = requests.get(url, params=params, timeout=10)
+                
+                if resp.status_code == 200:
+                    data = resp.json()
+                    normal_trans = "".join([p[0] for p in data[0] if p[0]])
+                    
+                    romanized_text = ""
+                    for p in data[0]:
+                        if p[0] is None and len(p) > 2 and p[2]:
+                            romanized_text += p[2]
+                            
+                    if romanized_text.strip():
+                        return romanized_text
+                    elif normal_trans.strip():
+                        return normal_trans # Fallback if language has no Romanization
         except Exception:
-            time.sleep(0.5)
+            time.sleep(1) # Wait to avoid API blocking
+            
     return eng_text
 
 def transcribe_audio_chunk(chunk_path, provider, api_key):
@@ -149,7 +168,6 @@ def transcribe_audio_chunk(chunk_path, provider, api_key):
         return response.json()
 
 def apply_subtitle_to_vlc(subtitle_path, success_message):
-    """Opens Windows Explorer highlighting the new subtitle to easily drag-and-drop into VLC."""
     try:
         if os.name == 'nt':
             subprocess.Popen(f'explorer /select,"{clean_path(subtitle_path)}"')
@@ -166,6 +184,7 @@ def run_generation():
     target_lang = gen_lang_var.get()
     api_key = api_key_var.get().strip()
     provider = provider_var.get()
+    romanize = gen_romanize_var.get()
 
     if not video_path: return messagebox.showerror("Error", "Please select a video file!")
     if not api_key: return messagebox.showerror("Error", "Please enter your API Key!")
@@ -195,10 +214,11 @@ def run_generation():
 
             target_code = LANGUAGES.get(target_lang, "en")
             if target_code != "en":
-                update_status("Translating subtitles...")
+                engine_type = "Manglish/Hinglish Mode" if romanize else "Native Script"
+                update_status(f"Translating subtitles ({engine_type})...")
                 completed = 0
                 def do_trans(seg):
-                    seg["text"] = translate_text(seg["text"], target_code)
+                    seg["text"] = translate_text(seg["text"], target_code, romanize)
                     return seg
                 with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_TRANSLATION_WORKERS) as exe:
                     futures = [exe.submit(do_trans, seg) for seg in all_segments]
@@ -207,14 +227,16 @@ def run_generation():
                         update_progress(completed, len(all_segments), "lines")
 
             srt_content = "".join([f"{i+1}\n{format_timestamp(s['start'])} --> {format_timestamp(s['end'])}\n{s['text']}\n\n" for i, s in enumerate(all_segments) if s['text']])
-            srt_path = clean_path(os.path.join(SUB_DIR, f"{os.path.splitext(os.path.basename(video_path))[0]}_{target_lang}.srt"))
+            
+            suffix = f"_{target_lang}_Romanized" if romanize else f"_{target_lang}"
+            srt_path = clean_path(os.path.join(SUB_DIR, f"{os.path.splitext(os.path.basename(video_path))[0]}{suffix}.srt"))
             
             with open(srt_path, 'w', encoding='utf-8') as f: f.write(srt_content)
             for f in os.listdir(TEMP_DIR): os.remove(os.path.join(TEMP_DIR, f))
             
             update_status("Done!")
             update_progress(100, 100, "%")
-            app.after(0, lambda: gen_video_var.set(video_path)) # Triggers combobox refresh
+            app.after(0, lambda: gen_video_var.set(video_path))
             apply_subtitle_to_vlc(srt_path, "Subtitles generated successfully!")
 
         except Exception as e:
@@ -228,6 +250,7 @@ def run_generation():
 def run_translation():
     srt_path = clean_path(trans_srt_var.get().strip())
     target_lang = trans_lang_var.get()
+    romanize = trans_romanize_var.get()
     
     if not srt_path: return messagebox.showerror("Error", "Please select an SRT file!")
 
@@ -239,10 +262,11 @@ def run_translation():
             
             target_code = LANGUAGES.get(target_lang, "en")
             if target_code != "en":
-                update_status("Translating subtitles...")
+                engine_type = "Manglish/Hinglish Mode" if romanize else "Native Script"
+                update_status(f"Translating subtitles ({engine_type})...")
                 completed = 0
                 def do_trans(seg):
-                    seg["text"] = translate_text(seg["text"], target_code)
+                    seg["text"] = translate_text(seg["text"], target_code, romanize)
                     return seg
                 with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_TRANSLATION_WORKERS) as exe:
                     futures = [exe.submit(do_trans, seg) for seg in segments]
@@ -251,15 +275,16 @@ def run_translation():
                         update_progress(completed, len(segments), "lines")
 
             srt_content = "".join([f"{i+1}\n{format_timestamp(s['start'])} --> {format_timestamp(s['end'])}\n{s['text']}\n\n" for i, s in enumerate(segments)])
+            
             base_name = os.path.splitext(os.path.basename(srt_path))[0]
-            save_path = clean_path(os.path.join(SUB_DIR, f"{base_name}_{target_lang}.srt"))
+            suffix = f"_{target_lang}_Romanized" if romanize else f"_{target_lang}"
+            save_path = clean_path(os.path.join(SUB_DIR, f"{base_name}{suffix}.srt"))
             
             with open(save_path, 'w', encoding='utf-8') as f: f.write(srt_content)
             
             update_status("Done!")
             update_progress(100, 100, "%")
             
-            # Refresh to show new file
             v_path = gen_video_var.get().strip()
             if v_path: app.after(0, lambda: gen_video_var.set(v_path)) 
             app.after(0, lambda: trans_srt_var.set(save_path))
@@ -384,30 +409,28 @@ def open_history():
 # --- UI SETUP ---
 app = tk.Tk()
 app.title("Universal Subtitles Toolkit (VLC Edition)")
-app.geometry("520x540")
+app.geometry("520x570") # Slightly taller to fit the new checkboxes
 app.configure(bg=DARK_BG)
 app.resizable(False, False)
 
 style = ttk.Style()
 style.theme_use('clam')
-
-# FIX FOR THE WHITE TEXT ON WHITE BOX: Forces black text on white background
 style.configure('TCombobox', fieldbackground="white", background="white", foreground="black", borderwidth=0)
-style.map('TCombobox', 
-          fieldbackground=[('readonly', 'white'), ('focus', 'white')], 
-          foreground=[('readonly', 'black'), ('focus', 'black')],
-          selectbackground=[('readonly', VLC_ORANGE), ('focus', VLC_ORANGE)],
-          selectforeground=[('readonly', 'black'), ('focus', 'black')])
+style.map('TCombobox', fieldbackground=[('readonly', 'white'), ('focus', 'white')], foreground=[('readonly', 'black'), ('focus', 'black')], selectbackground=[('readonly', VLC_ORANGE), ('focus', VLC_ORANGE)], selectforeground=[('readonly', 'black'), ('focus', 'black')])
 
 provider_var = tk.StringVar(value="Groq (Lightning Fast)")
 api_key_var = tk.StringVar()
 gen_video_var = tk.StringVar()
 gen_lang_var = tk.StringVar(value="English")
+gen_romanize_var = tk.BooleanVar(value=False) # New Checkbox Var
+
 trans_srt_var, trans_lang_var = tk.StringVar(), tk.StringVar(value="Malayalam")
+trans_romanize_var = tk.BooleanVar(value=False) # New Checkbox Var
+
 sync_srt_var, sync_offset_var = tk.StringVar(), tk.StringVar(value="+0.0")
 progress_var = tk.IntVar(value=0)
 
-gen_video_var.trace_add("write", on_video_change) # Triggers folder scan when video path is filled
+gen_video_var.trace_add("write", on_video_change)
 
 header_frame = tk.Frame(app, bg=DARK_BG)
 header_frame.pack(fill=tk.X, padx=20, pady=(15, 5))
@@ -444,10 +467,14 @@ tk.Entry(f1, textvariable=gen_video_var, width=31, bg=DARK_BG, fg="white", borde
 tk.Button(f1, text="Browse", command=lambda: browse_video(gen_video_var), bg="#333", fg="white", relief=tk.FLAT).pack(side=tk.LEFT)
 tk.Label(frame_gen, text="Translate To:", bg=PANEL_BG, fg="white", font=("Segoe UI", 9)).pack(pady=(10,2))
 ttk.Combobox(frame_gen, textvariable=gen_lang_var, values=sorted(LANGUAGES.keys()), state="readonly", width=38).pack()
-gen_btn = tk.Button(frame_gen, text="GENERATE", bg=VLC_ORANGE, fg="black", font=("Segoe UI", 10, "bold"), relief=tk.FLAT, command=run_generation)
-gen_btn.pack(pady=20, ipadx=10, ipady=5)
 
-# TAB 2 (NOW A COMBOBOX FOR EASY SELECTION)
+# NEW ROMANIZE CHECKBOX
+tk.Checkbutton(frame_gen, text="Write in English Letters (e.g. Manglish, Hinglish)", variable=gen_romanize_var, bg=PANEL_BG, fg="#a0a0a0", activebackground=PANEL_BG, activeforeground="white", selectcolor=DARK_BG).pack(pady=(5,0))
+
+gen_btn = tk.Button(frame_gen, text="GENERATE", bg=VLC_ORANGE, fg="black", font=("Segoe UI", 10, "bold"), relief=tk.FLAT, command=run_generation)
+gen_btn.pack(pady=15, ipadx=10, ipady=5)
+
+# TAB 2
 tk.Label(frame_trans, text="Select Subtitle from Video Folder:", bg=PANEL_BG, fg="white", font=("Segoe UI", 9)).pack(pady=(30,2))
 f2 = tk.Frame(frame_trans, bg=PANEL_BG); f2.pack()
 trans_srt_cb = ttk.Combobox(f2, textvariable=trans_srt_var, state="normal", width=38)
@@ -455,10 +482,14 @@ trans_srt_cb.pack(side=tk.LEFT, padx=5)
 tk.Button(f2, text="Browse", command=lambda: browse_srt(trans_srt_var), bg="#333", fg="white", relief=tk.FLAT).pack(side=tk.LEFT)
 tk.Label(frame_trans, text="Translate To:", bg=PANEL_BG, fg="white", font=("Segoe UI", 9)).pack(pady=(20,2))
 ttk.Combobox(frame_trans, textvariable=trans_lang_var, values=sorted(LANGUAGES.keys()), state="readonly", width=38).pack()
-trans_btn = tk.Button(frame_trans, text="TRANSLATE & APPLY", bg=VLC_ORANGE, fg="black", font=("Segoe UI", 10, "bold"), relief=tk.FLAT, command=run_translation)
-trans_btn.pack(pady=30, ipadx=10, ipady=5)
 
-# TAB 3 (NOW A COMBOBOX FOR EASY SELECTION)
+# NEW ROMANIZE CHECKBOX
+tk.Checkbutton(frame_trans, text="Write in English Letters (e.g. Manglish, Hinglish)", variable=trans_romanize_var, bg=PANEL_BG, fg="#a0a0a0", activebackground=PANEL_BG, activeforeground="white", selectcolor=DARK_BG).pack(pady=(5,0))
+
+trans_btn = tk.Button(frame_trans, text="TRANSLATE & APPLY", bg=VLC_ORANGE, fg="black", font=("Segoe UI", 10, "bold"), relief=tk.FLAT, command=run_translation)
+trans_btn.pack(pady=15, ipadx=10, ipady=5)
+
+# TAB 3
 tk.Label(frame_sync, text="Select Subtitle from Video Folder:", bg=PANEL_BG, fg="white", font=("Segoe UI", 9)).pack(pady=(30,2))
 f3 = tk.Frame(frame_sync, bg=PANEL_BG); f3.pack()
 sync_srt_cb = ttk.Combobox(f3, textvariable=sync_srt_var, state="normal", width=38)
@@ -487,9 +518,9 @@ if len(sys.argv) > 1:
             trans_srt_var.set(passed_path)
             sync_srt_var.set(passed_path)
             v_match = detect_paired_file(passed_path, "video")
-            if v_match: gen_video_var.set(v_match) # This triggers the folder scan!
+            if v_match: gen_video_var.set(v_match)
         else:
-            gen_video_var.set(passed_path) # Triggers folder scan and auto-selects subtitles!
+            gen_video_var.set(passed_path)
 
 show_tab(0)
 app.mainloop()
