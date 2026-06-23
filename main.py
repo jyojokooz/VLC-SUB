@@ -7,11 +7,15 @@ import concurrent.futures
 import sys
 import re
 
+# Custom Modular Imports
 import config
 from utils import clean_path, format_timestamp, parse_srt, get_available_subtitles, detect_paired_file, generate_ass_content, resource_path
 from engines import transcribe_audio_chunk, translate_text, detect_sync_offset
 from vlc_integration import launch_vlc_preview, apply_subtitle_to_vlc
 from ui_windows import show_srt_preview, show_style_preview, open_history
+
+# Secure API Key Storage
+from security import save_api_key, load_api_key
 
 # ============================================================
 # HELPER / CALLBACKS
@@ -46,6 +50,9 @@ def run_generation():
     if not video_path: return messagebox.showerror("Error", "Please select a video file!")
     if not os.path.exists(video_path): return messagebox.showerror("Error", "Video file not found!")
     if not api_key: return messagebox.showerror("Error", "Please enter your API Key!")
+
+    # Securely save the API key to Windows Credential Manager
+    save_api_key(api_key)
 
     def _task():
         try:
@@ -312,7 +319,10 @@ style.map('TCombobox', fieldbackground=[('readonly', 'white'), ('focus', 'white'
           selectbackground=[('readonly', config.VLC_ORANGE)], selectforeground=[('readonly', 'black')])
 
 provider_var      = tk.StringVar(value="Groq (Lightning Fast)")
-api_key_var       = tk.StringVar()
+
+# -> Automatically Load API Key on Startup!
+api_key_var       = tk.StringVar(value=load_api_key())
+
 gen_video_var     = tk.StringVar()
 gen_lang_var      = tk.StringVar(value="English")
 gen_romanize_var  = tk.BooleanVar(value=False)
@@ -367,7 +377,19 @@ frames = [frame_gen, frame_trans, frame_sync, frame_custom]
 # Tab 1
 tk.Label(frame_gen, text="Provider & API Key:", bg=config.PANEL_BG, fg="white", font=("Segoe UI", 9)).pack(pady=(12, 2))
 ttk.Combobox(frame_gen, textvariable=provider_var, values=["Groq (Lightning Fast)", "OpenAI (Standard)"], state="readonly", width=40).pack()
-tk.Entry(frame_gen, textvariable=api_key_var, show="*", width=43, bg=config.DARK_BG, fg="white", insertbackground="white", border=0).pack(pady=4, ipady=3)
+f_api = tk.Frame(frame_gen, bg=config.PANEL_BG)
+f_api.pack(pady=4)
+tk.Entry(f_api, textvariable=api_key_var, show="*", width=35, bg=config.DARK_BG, fg="white", insertbackground="white", border=0).pack(side=tk.LEFT, ipady=3, padx=(0, 5))
+
+def on_save_key():
+    key = api_key_var.get().strip()
+    if key:
+        save_api_key(key)
+        messagebox.showinfo("Saved", "API Key saved securely!")
+    else:
+        messagebox.showwarning("Empty", "Please paste an API key first.")
+
+tk.Button(f_api, text="💾 Save", bg="#333", fg="white", relief=tk.FLAT, command=on_save_key, padx=5).pack(side=tk.LEFT)
 tk.Label(frame_gen, text="Select Video:", bg=config.PANEL_BG, fg="white", font=("Segoe UI", 9)).pack(pady=(6, 2))
 f1 = tk.Frame(frame_gen, bg=config.PANEL_BG); f1.pack()
 tk.Entry(f1, textvariable=gen_video_var, width=33, bg=config.DARK_BG, fg="white", border=0).pack(side=tk.LEFT, padx=5, ipady=3)
