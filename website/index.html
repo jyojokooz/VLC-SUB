@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Subtitle AI — AI-Powered Subtitles for VLC</title>
+    <meta name="description" content="Universal Subtitle AI generates accurate subtitles locally using AI. Transcribe, translate, and understand — seamlessly integrated with VLC Media Player.">
+    <link rel="icon" href="assets/ChatGPT Image Jun 18, 2026, 01_32_31 PM (1).png" type="image/png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <!-- Animated Background -->
+    <div class="bg-effects" aria-hidden="true">
+        <div class="bg-grid"></div>
+        <div class="bg-glow glow-1"></div>
+        <div class="bg-glow glow-2"></div>
+        <div class="bg-glow glow-3"></div>
+        <div class="bg-particles" id="particles"></div>
+    </div>
+
+    <!-- Header -->
+    <header id="site-header">
+        <div class="header-inner">
+            <a href="#" class="logo-link">
+                <img src="assets/ChatGPT Image Jun 18, 2026, 01_32_31 PM (1).png" alt="Logo" class="logo-icon">
+                <span class="logo-text">Universal Subtitle <span class="accent">AI</span></span>
+            </a>
+            <nav id="main-nav">
+                <a href="#features">Features</a>
+                <a href="#showcase">Showcase</a>
+                <a href="#how-it-works">How It Works</a>
+                <a href="downloads/UniversalSubtitles_Setup.exe" class="nav-download-btn" download>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Download
+                </a>
+            </nav>
+            <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Toggle menu">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </header>
+
+    <main>
+
+        <!-- Hero Section -->
+        <section class="hero" id="hero">
+            <div class="hero-left">
+                <div class="hero-badge fade-up">
+                    <span class="pulse-dot"></span>
+                    Version 1.0 — Free Download
+                </div>
+                <h1 class="hero-title fade-up delay-1">
+                    AI-Powered Subtitles<br>
+                    <span class="gradient-text">for VLC</span>
+                </h1>
+                <p class="hero-desc fade-up delay-2">
+                    Transcribe. Translate. Understand.<br>
+                    Generate highly accurate subtitles locally with AI — your files never leave your computer.
+                </p>
+                <div class="hero-actions fade-up delay-3">
+                    <a href="downloads/UniversalSubtitles_Setup.exe" class="btn btn-primary" id="hero-download-btn" download>
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Download for Windows
+                    </a>
+                    <a href="#features" class="btn btn-ghost">
+                        Learn More
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                    </a>
+                </div>
+                <div class="hero-meta fade-up delay-4">
+                    <div class="meta-item">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/></svg>
+                        Windows 10 & 11
+                    </div>
+                    <div class="meta-item">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        100% Offline & Private
+                    </div>
+                    <div class="meta-item">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        One-Click Setup
+                    </div>
+                </div>
+            </div>
+            <div class="hero-right fade-up delay-2">
+                <div class="hero-showcase-frame">
+                    <div class="frame-glow"></div>
+                    <img src="assets/b3071856-7221-4be0-b674-2296f8156a85.png" alt="Universal Subtitle AI — Promotional Banner" class="hero-showcase-img">
+                </div>
+            </div>
+        </section>
+
+        <!-- App Preview Section -->
+        <section class="app-preview-section" id="app-preview">
+            <div class="section-container">
+                <div class="app-preview-frame fade-up">
+                    <div class="preview-window-bar">
+                        <div class="win-dot red"></div>
+                        <div class="win-dot yellow"></div>
+                        <div class="win-dot green"></div>
+                        <span class="win-title">Universal Subtitles Toolkit (VLC Edition)</span>
+                    </div>
+                    <img src="assets/Screenshot 2026-06-19 170100.png" alt="Universal Subtitle AI Application Window" class="app-preview-img">
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section class="features-section" id="features">
+            <div class="section-container">
+                <div class="section-label fade-up">CAPABILITIES</div>
+                <h2 class="section-title fade-up delay-1">Everything You Need</h2>
+                <p class="section-desc fade-up delay-2">Powerful AI subtitle generation built directly into your VLC workflow.</p>
+
+                <div class="features-grid">
+                    <div class="feature-card fade-up">
+                        <div class="feature-icon-wrap">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                        </div>
+                        <h3>Automatic Transcription</h3>
+                        <p>Powered by advanced speech-to-text AI. Handles accents, background noise, and multiple speakers effortlessly.</p>
+                    </div>
+                    <div class="feature-card fade-up delay-1">
+                        <div class="feature-icon-wrap">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                        </div>
+                        <h3>Multi-Language Translation</h3>
+                        <p>Translate subtitles into dozens of languages instantly. Supports Manglish, Hinglish, and custom transliterations.</p>
+                    </div>
+                    <div class="feature-card fade-up delay-2">
+                        <div class="feature-icon-wrap">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                        </div>
+                        <h3>AI-Powered Accuracy</h3>
+                        <p>Choose from multiple AI providers including Groq for lightning-fast processing with exceptional accuracy.</p>
+                    </div>
+                    <div class="feature-card fade-up delay-3">
+                        <div class="feature-icon-wrap">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                        </div>
+                        <h3>SRT Export</h3>
+                        <p>Export subtitles in standard SRT format. Compatible with every major video player and editing tool.</p>
+                    </div>
+                    <div class="feature-card fade-up delay-4">
+                        <div class="feature-icon-wrap">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        </div>
+                        <h3>Total Privacy</h3>
+                        <p>All processing happens locally on your machine. Your audio and video files never leave your computer.</p>
+                    </div>
+                    <div class="feature-card fade-up delay-5">
+                        <div class="feature-icon-wrap">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                        </div>
+                        <h3>VLC Integration</h3>
+                        <p>Seamlessly integrates with VLC Media Player. Generate and sync subtitles directly from the toolkit.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Showcase / Gallery Section -->
+        <section class="showcase-section" id="showcase">
+            <div class="section-container" style="text-align: center;">
+                <div class="section-label fade-up">BRAND</div>
+                <h2 class="section-title fade-up delay-1">Universal Subtitle AI</h2>
+                <div class="showcase-grid" style="display: flex; justify-content: center; margin-top: 3rem;">
+                    <div class="showcase-card fade-up delay-2" style="max-width: 400px; width: 100%;">
+                        <img src="assets/c2aa87cb-994f-4543-8501-2c22268d8a73.png" alt="Universal Subtitle AI — Logo">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- How It Works -->
+        <section class="how-section" id="how-it-works">
+            <div class="section-container">
+                <div class="section-label fade-up">GETTING STARTED</div>
+                <h2 class="section-title fade-up delay-1">Up and Running in Minutes</h2>
+                <p class="section-desc fade-up delay-2">Three simple steps to start generating subtitles automatically.</p>
+
+                <div class="steps-grid">
+                    <div class="step-card fade-up">
+                        <div class="step-number">01</div>
+                        <h3>Download & Install</h3>
+                        <p>Download the setup file and run the installer. It takes less than a minute.</p>
+                    </div>
+                    <div class="step-connector fade-up delay-1">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                    </div>
+                    <div class="step-card fade-up delay-1">
+                        <div class="step-number">02</div>
+                        <h3>Select Your Video</h3>
+                        <p>Browse for any video file. Choose your AI provider and target language.</p>
+                    </div>
+                    <div class="step-connector fade-up delay-2">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                    </div>
+                    <div class="step-card fade-up delay-2">
+                        <div class="step-number">03</div>
+                        <h3>Generate & Enjoy</h3>
+                        <p>Hit Generate and let AI do the work. Your SRT file is ready in seconds.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Final CTA -->
+        <section class="cta-section" id="download">
+            <div class="section-container">
+                <div class="cta-card fade-up">
+                    <div class="cta-bg-art" aria-hidden="true">
+                        <div class="cta-ring ring-1"></div>
+                        <div class="cta-ring ring-2"></div>
+                    </div>
+                    <div class="cta-content">
+                        <h2 class="fade-up delay-1">Ready to Transform Your Subtitling?</h2>
+                        <p class="fade-up delay-2">Download Universal Subtitle AI now — completely free.</p>
+                        <a href="downloads/UniversalSubtitles_Setup.exe" class="btn btn-primary btn-lg fade-up delay-3" download>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Download for Windows
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer id="site-footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <img src="assets/ChatGPT Image Jun 18, 2026, 01_32_31 PM (1).png" alt="Logo" class="footer-logo-icon">
+                <span>Universal Subtitle <span class="accent">AI</span></span>
+            </div>
+            <p class="footer-copy">&copy; 2026 Universal Subtitle AI. All rights reserved.</p>
+            <div class="footer-tagline">Watch in any language. <span class="accent">Anytime. Anywhere.</span></div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

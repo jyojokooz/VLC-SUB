@@ -21,3 +21,9 @@ ENV/
 # IDEs
 .vscode/
 .idea/
+
+# PyInstaller & Build files
+build/
+dist/
+Output/
+*.spec
