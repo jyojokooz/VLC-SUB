@@ -338,8 +338,8 @@ def generate_ass_content(segments, style):
         "ScriptType: v4.00+\n"
         "WrapStyle: 0\n"
         "ScaledBorderAndShadow: yes\n"
-        "PlayResX: 1920\n"
-        "PlayResY: 1080\n\n"
+        "PlayResX: 512\n"
+        "PlayResY: 288\n\n"
         "[V4+ Styles]\n"
         "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, "
         "OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, "
@@ -368,6 +368,35 @@ def generate_ass_content(segments, style):
 # ============================================================
 # VLC HELPER
 # ============================================================
+def get_vlc_path():
+    paths = [
+        os.path.join(os.environ.get('PROGRAMW6432', 'C:\\Program Files'), 'VideoLAN', 'VLC', 'vlc.exe'),
+        os.path.join(os.environ.get('PROGRAMFILES(X86)', 'C:\\Program Files (x86)'), 'VideoLAN', 'VLC', 'vlc.exe'),
+        os.path.join(os.environ.get('PROGRAMFILES', 'C:\\Program Files'), 'VideoLAN', 'VLC', 'vlc.exe')
+    ]
+    for p in paths:
+        if os.path.exists(p):
+            return p
+    return None
+
+def launch_vlc_preview(srt_var_getter):
+    v_path = clean_path(gen_video_var.get().strip())
+    s_path = clean_path(srt_var_getter())
+    
+    if not v_path or not os.path.exists(v_path):
+        return messagebox.showerror("VLC Preview", "No valid video file selected.\nPlease select a video in Tab 1 first!")
+    if not s_path or not os.path.exists(s_path):
+        return messagebox.showerror("VLC Preview", "No valid subtitle file selected.")
+        
+    vlc = get_vlc_path()
+    if not vlc:
+        return messagebox.showerror("VLC Not Found", "Could not locate vlc.exe.\nPlease ensure VLC is installed in the default directory (32-bit or 64-bit).")
+        
+    try:
+        subprocess.Popen([vlc, v_path, f"--sub-file={s_path}"])
+    except Exception as e:
+        messagebox.showerror("Error", f"Could not launch VLC:\n{e}")
+
 def apply_subtitle_to_vlc(subtitle_path, success_message):
     try:
         if os.name == 'nt':
@@ -765,7 +794,7 @@ def show_srt_preview(srt_var_getter, title="👁 Subtitle Preview"):
     txt.tag_configure("time",  foreground=VLC_ORANGE, font=("Consolas", 9, "bold"))
     txt.tag_configure("body",  foreground="#e8e8e8",  font=("Consolas", 9))
     txt.tag_configure("sep",   foreground="#252525")
-    txt.tag_configure("found", background="#ff8c0055", foreground="white")
+    txt.tag_configure("found", background=VLC_ORANGE, foreground="black")
 
     for seg in segments:
         txt.insert(tk.END, f"[{seg['index']}]  ", "idx")
@@ -823,7 +852,7 @@ def show_style_preview():
 
     tk.Label(pw, text="Live Style Preview", bg=DARK_BG, fg=VLC_ORANGE,
              font=("Segoe UI", 11, "bold")).pack(pady=(10, 4))
-    tk.Label(pw, text="Adjust settings in Tab 4 then click Refresh",
+    tk.Label(pw, text="Preview updates automatically as you change settings",
              bg=DARK_BG, fg="#555", font=("Segoe UI", 8)).pack(pady=(0, 6))
 
     CWIDTH, CHEIGHT = 620, 280
@@ -831,30 +860,26 @@ def show_style_preview():
                        highlightthickness=2, highlightbackground="#333")
     canvas.pack(padx=20)
 
-    # Retrieve first real subtitle line for preview, or use sample
-    def get_preview_text(entry_widget):
-        t = entry_widget.get().strip()
-        if t: return t
+    # Fetch initial text from the SRT if available
+    def get_initial_text():
         sp = clean_path(custom_srt_var.get().strip())
         if sp and os.path.exists(sp):
             segs = parse_srt(sp)
             if segs: return segs[0]['text'].replace('\n', ' ')[:60]
-        return "Sample Subtitle — Your text appears here"
+        return "Sample subtitle text – preview here"
 
-    def draw(preview_text=""):
+    def draw():
         canvas.delete("all")
-        # — cinematic background —
-        canvas.create_rectangle(0, 0, CWIDTH, CHEIGHT, fill="#08080f", outline="")
-        # decorative scan-lines
-        for y in range(0, CHEIGHT, 4):
-            canvas.create_line(0, y, CWIDTH, y, fill="#0d0d15", width=1)
-        # subtle vignette strips
-        canvas.create_rectangle(0, 0, CWIDTH, 30, fill="#000000", outline="")
-        canvas.create_rectangle(0, CHEIGHT-30, CWIDTH, CHEIGHT, fill="#000000", outline="")
-        # fake video content lines
-        for i, yl in enumerate([55, 80, 105, 130, 155]):
-            shade = "#111128" if i % 2 == 0 else "#0e0e22"
-            canvas.create_rectangle(30, yl, CWIDTH-30, yl+16, fill=shade, outline="")
+        # — professional neutral transparency background —
+        canvas.create_rectangle(0, 0, CWIDTH, CHEIGHT, fill="#444444", outline="")
+        for x in range(0, CWIDTH, 20):
+            for y in range(0, CHEIGHT, 20):
+                if (x // 20 + y // 20) % 2 == 0:
+                    canvas.create_rectangle(x, y, x+20, y+20, fill="#3c3c3c", outline="")
+
+        # subtle cinematic bars
+        canvas.create_rectangle(0, 0, CWIDTH, 25, fill="#111111", outline="")
+        canvas.create_rectangle(0, CHEIGHT-25, CWIDTH, CHEIGHT, fill="#111111", outline="")
 
         font_name   = custom_font_var.get() or "Arial"
         font_size   = custom_size_var.get()
@@ -862,34 +887,33 @@ def show_style_preview():
         italic_flag = "italic" if custom_italic_var.get() else ""
         weight      = " ".join(filter(None, [bold_flag, italic_flag])) or "normal"
         try:
-            fnt = (font_name, font_size, weight)
-            canvas.create_text(CWIDTH//2, 10, text=fnt[0], fill="#0",
-                               font=fnt)  # dry-run to catch bad font
+            fnt = (font_name, -font_size, weight)
+            tmp = canvas.create_text(CWIDTH//2, 10, text="A", fill="#000000", font=fnt)
+            canvas.delete(tmp)
         except Exception:
-            fnt = ("Arial", font_size, weight)
+            fnt = ("Arial", -font_size, weight)
 
         text_col    = custom_text_color_var.get()
         outline_col = custom_outline_color_var.get()
         outline_sz  = custom_outline_sz_var.get()
         shadow_sz   = custom_shadow_var.get()
         pos         = custom_position_var.get()
-        display_txt = preview_text or get_preview_text(entry_widget)
+        display_txt = entry_widget.get().strip() or " "
 
         cx = CWIDTH // 2
         cy = 38 if pos == "top" else CHEIGHT - 38
 
-        # shadow box
+        # shadow box - accurate bounding box
         if custom_bg_var.get():
-            try:
-                tw = len(display_txt) * font_size * 0.48
-                th = font_size + 12
+            tmp = canvas.create_text(cx, cy, text=display_txt, font=fnt, anchor="center")
+            bbox = canvas.bbox(tmp)
+            canvas.delete(tmp)
+            if bbox:
+                x1, y1, x2, y2 = bbox
                 canvas.create_rectangle(
-                    cx - tw//2 - 10, cy - th//2 - 2,
-                    cx + tw//2 + 10, cy + th//2 + 2,
-                    fill="#000000", outline="", stipple="gray50"
+                    x1 - 10, y1 - 2, x2 + 10, y2 + 2,
+                    fill="#111111", outline=""
                 )
-            except Exception:
-                pass
 
         # shadow glow
         if shadow_sz > 0:
@@ -921,16 +945,45 @@ def show_style_preview():
              font=("Segoe UI", 9)).pack(side=tk.LEFT)
     entry_widget = tk.Entry(ctrl, width=32, bg="#2a2a2a", fg="white",
                             insertbackground="white", border=0, font=("Segoe UI", 9))
-    entry_widget.insert(0, "Sample subtitle text – preview here")
+    entry_widget.insert(0, get_initial_text())
     entry_widget.pack(side=tk.LEFT, padx=6, ipady=2)
-    tk.Button(ctrl, text="🔄 Refresh", bg="#333", fg="white", relief=tk.FLAT,
-              font=("Segoe UI", 9, "bold"), padx=8, pady=3,
-              command=lambda: draw(entry_widget.get().strip())).pack(side=tk.LEFT)
     tk.Button(ctrl, text="Use 1st subtitle line", bg="#252525", fg="#aaa",
               relief=tk.FLAT, font=("Segoe UI", 8), padx=6, pady=3,
               command=lambda: [entry_widget.delete(0, tk.END),
-                               entry_widget.insert(0, get_preview_text(entry_widget)),
+                               entry_widget.insert(0, get_initial_text()),
                                draw()]).pack(side=tk.LEFT, padx=4)
+
+    # Live update bindings
+    def live_update(*args):
+        if canvas.winfo_exists():
+            draw()
+
+    entry_widget.bind("<KeyRelease>", live_update)
+    pw.live_update_ref = live_update  # Keep strong reference
+    
+    traces = []
+    def add_trace(var):
+        cb = var.trace_add("write", live_update)
+        traces.append((var, cb))
+
+    add_trace(custom_font_var)
+    add_trace(custom_size_var)
+    add_trace(custom_text_color_var)
+    add_trace(custom_outline_color_var)
+    add_trace(custom_bg_var)
+    add_trace(custom_bold_var)
+    add_trace(custom_italic_var)
+    add_trace(custom_outline_sz_var)
+    add_trace(custom_shadow_var)
+    add_trace(custom_position_var)
+
+    def on_close():
+        for var, cb in traces:
+            try: var.trace_remove("write", cb)
+            except: pass
+        pw.destroy()
+
+    pw.protocol("WM_DELETE_WINDOW", on_close)
 
     draw()  # initial render
 
@@ -1179,6 +1232,9 @@ tk.Button(row_gen, text="👁 Preview", bg="#2a2a2a", fg=VLC_ORANGE, relief=tk.F
               lambda: trans_srt_var.get(),
               "👁 Preview — Generated Subtitle"
           )).pack(side=tk.LEFT, padx=(6, 0))
+tk.Button(row_gen, text="▶ VLC Preview", bg="#2a2a2a", fg="#4CAF50", relief=tk.FLAT,
+          font=("Segoe UI", 9, "bold"), padx=8, pady=6,
+          command=lambda: launch_vlc_preview(lambda: trans_srt_var.get())).pack(side=tk.LEFT, padx=(6, 0))
 
 # ============================================================
 # TAB 2 — TRANSLATE
@@ -1209,6 +1265,9 @@ tk.Button(row_trans, text="👁 Preview", bg="#2a2a2a", fg=VLC_ORANGE, relief=tk
               lambda: trans_srt_var.get(),
               "👁 Preview — Subtitle File"
           )).pack(side=tk.LEFT, padx=(6, 0))
+tk.Button(row_trans, text="▶ VLC Preview", bg="#2a2a2a", fg="#4CAF50", relief=tk.FLAT,
+          font=("Segoe UI", 9, "bold"), padx=8, pady=6,
+          command=lambda: launch_vlc_preview(lambda: trans_srt_var.get())).pack(side=tk.LEFT, padx=(6, 0))
 tk.Label(frame_trans, text="Supports 60+ languages  •  Long texts auto-chunked for reliability",
          bg=PANEL_BG, fg="#555", font=("Segoe UI", 8)).pack()
 
@@ -1253,6 +1312,9 @@ tk.Button(row_sync, text="👁 Preview", bg="#2a2a2a", fg=VLC_ORANGE, relief=tk.
               lambda: sync_srt_var.get(),
               "👁 Preview — Sync File"
           )).pack(side=tk.LEFT, padx=(6, 0))
+tk.Button(row_sync, text="▶ VLC Preview", bg="#2a2a2a", fg="#4CAF50", relief=tk.FLAT,
+          font=("Segoe UI", 9, "bold"), padx=8, pady=6,
+          command=lambda: launch_vlc_preview(lambda: sync_srt_var.get())).pack(side=tk.LEFT, padx=(6, 0))
 
 # ============================================================
 # TAB 4 — CUSTOMIZE
@@ -1322,18 +1384,21 @@ tk.Scale(R, from_=0, to=3, orient=tk.HORIZONTAL, variable=custom_shadow_var,
          activebackground=VLC_ORANGE, length=130).pack(anchor="w")
 
 row_custom = tk.Frame(frame_custom, bg=PANEL_BG); row_custom.pack(pady=(8, 3))
-export_ass_btn = tk.Button(row_custom, text="🎨 EXPORT AS STYLED .ASS", bg=VLC_ORANGE, fg="black",
+export_ass_btn = tk.Button(row_custom, text="🎨 EXPORT", bg=VLC_ORANGE, fg="black",
                            font=("Segoe UI", 10, "bold"), relief=tk.FLAT, command=run_export_ass)
-export_ass_btn.pack(side=tk.LEFT, ipadx=10, ipady=6)
-tk.Button(row_custom, text="👁 Preview SRT", bg="#2a2a2a", fg=VLC_ORANGE, relief=tk.FLAT,
-          font=("Segoe UI", 9, "bold"), padx=8, pady=6,
+export_ass_btn.pack(side=tk.LEFT, ipadx=8, ipady=6)
+tk.Button(row_custom, text="👁 SRT", bg="#2a2a2a", fg=VLC_ORANGE, relief=tk.FLAT,
+          font=("Segoe UI", 9, "bold"), padx=6, pady=6,
           command=lambda: show_srt_preview(
               lambda: custom_srt_var.get(),
               "👁 Preview — Subtitle Content"
-          )).pack(side=tk.LEFT, padx=(5, 0))
-tk.Button(row_custom, text="🖥 Style Preview", bg="#1a2a1a", fg="#4CAF50", relief=tk.FLAT,
-          font=("Segoe UI", 9, "bold"), padx=8, pady=6,
-          command=show_style_preview).pack(side=tk.LEFT, padx=(5, 0))
+          )).pack(side=tk.LEFT, padx=(3, 0))
+tk.Button(row_custom, text="🖥 Style", bg="#1a2a1a", fg="#4CAF50", relief=tk.FLAT,
+          font=("Segoe UI", 9, "bold"), padx=6, pady=6,
+          command=show_style_preview).pack(side=tk.LEFT, padx=(3, 0))
+tk.Button(row_custom, text="▶ VLC", bg="#2a2a2a", fg="#4CAF50", relief=tk.FLAT,
+          font=("Segoe UI", 9, "bold"), padx=6, pady=6,
+          command=lambda: launch_vlc_preview(lambda: custom_srt_var.get())).pack(side=tk.LEFT, padx=(3, 0))
 tk.Label(frame_custom, text="ASS format = full styling in VLC  (font, color, position, outline)",
          bg=PANEL_BG, fg="#555", font=("Segoe UI", 8)).pack()
 
