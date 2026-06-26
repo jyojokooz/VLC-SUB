@@ -4,8 +4,8 @@
 a = Analysis(
     ['main.py'],
     pathex=[],
-    binaries=[],
-    datas=[],
+    binaries=[('ffmpeg.exe', 'bin')],
+    datas=[('logo.ico', '.'), ('universal_subtitles.lua', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

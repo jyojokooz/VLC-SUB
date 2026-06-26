@@ -11,7 +11,7 @@ import re
 import config
 from utils import clean_path, format_timestamp, parse_srt, get_available_subtitles, detect_paired_file, generate_ass_content, resource_path
 from engines import transcribe_audio_chunk, translate_text, detect_sync_offset
-from vlc_integration import launch_vlc_preview, apply_subtitle_to_vlc
+from vlc_integration import launch_vlc_preview, apply_subtitle_to_vlc, install_vlc_extension
 from ui_windows import show_srt_preview, show_style_preview, open_history
 
 # Secure API Key Storage
@@ -65,7 +65,11 @@ def run_generation():
             update_status("Compressing audio for AI (Wait ~15s)...")
             chunk_pattern = os.path.join(config.TEMP_DIR, "chunk_%03d.m4a")
             cf  = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
-            cmd = ["ffmpeg", "-y", "-i", video_path, "-vn", "-c:a", "aac", "-b:a", "64k",
+            
+            # --- FIX: Use bundled ffmpeg path instead of system path ---
+            ffmpeg_path = resource_path(os.path.join("bin", "ffmpeg.exe"))
+            
+            cmd = [ffmpeg_path, "-y", "-i", video_path, "-vn", "-c:a", "aac", "-b:a", "64k",
                    "-ar", "16000", "-ac", "1", "-af", "loudnorm", "-f", "segment",
                    "-segment_time", "600", chunk_pattern]
 
@@ -356,6 +360,7 @@ style_vars = {
 hdr = tk.Frame(app, bg=config.DARK_BG); hdr.pack(fill=tk.X, padx=20, pady=(14, 5))
 tk.Label(hdr, text="UNIVERSAL SUBTITLE TOOLKIT", bg=config.DARK_BG, fg=config.VLC_ORANGE, font=("Segoe UI", 14, "bold")).pack(side=tk.LEFT)
 tk.Button(hdr, text="📜 History", bg="#333", fg="white", relief=tk.FLAT, font=("Segoe UI", 9), command=lambda: open_history(app, populate_all_tabs), padx=8).pack(side=tk.RIGHT)
+tk.Button(hdr, text="🔌 Install VLC Extension", bg="#333", fg=config.VLC_ORANGE, relief=tk.FLAT, font=("Segoe UI", 9, "bold"), command=lambda: install_vlc_extension(app), padx=8).pack(side=tk.RIGHT, padx=(0, 10))
 
 tab_frame = tk.Frame(app, bg=config.DARK_BG); tab_frame.pack(fill=tk.X, padx=20, pady=5)
 def show_tab(idx):

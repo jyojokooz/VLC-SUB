@@ -1,0 +1,2786 @@
+============================================================
+FILE: .\.gitignore
+============================================================
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Application Specific
+temp_audio/
+subtitles/
+debug_log.txt
+
+# Executables & Binaries (Do not push these to GitHub!)
+ffmpeg.exe
+ffprobe.exe
+
+# Environments
+.venv/
+env/
+venv/
+ENV/
+
+# IDEs
+.vscode/
+.idea/
+
+# PyInstaller & Build files
+build/
+dist/
+Output/
+*.spec
+
+============================================================
+FILE: .\combine.py
+============================================================
+
+import os
+
+# Configuration
+OUTPUT_FILE = 'file.txt'
+
+# Add or remove file extensions you consider "important"
+ALLOWED_EXTENSIONS = {'.py', '.html', '.css', '.js', '.iss', '.spec', '.gitignore'}
+
+# Folders to completely ignore (like build artifacts and assets)
+IGNORED_DIRS = {'__pycache__', 'build', 'dist', 'assets', 'Output', 'subtitles', 'downloads', '.git', '_internal'}
+
+def combine_files():
+    # Open the output file in write mode
+    with open(OUTPUT_FILE, 'w', encoding='utf-8') as outfile:
+        
+        # Walk through the directory tree starting from the current folder ('.')
+        for root, dirs, files in os.walk('.'):
+            
+            # Modify the 'dirs' list in-place to skip ignored directories
+            dirs[:] = [d for d in dirs if d not in IGNORED_DIRS]
+            
+            for file in files:
+                # Prevent the script from reading its own output file
+                if file == OUTPUT_FILE:
+                    continue
+                
+                # Get the file extension
+                _, ext = os.path.splitext(file)
+                ext = ext.lower()
+                
+                # Special check for files like .gitignore where the whole name is considered the extension by splitext
+                is_important = (ext in ALLOWED_EXTENSIONS) or (file in ALLOWED_EXTENSIONS)
+                
+                if is_important:
+                    filepath = os.path.join(root, file)
+                    
+                    try:
+                        # Read the content of the source file
+                        with open(filepath, 'r', encoding='utf-8') as infile:
+                            content = infile.read()
+                            
+                        # Write a nice separator, the file name, and the content to the txt
+                        outfile.write(f"{'='*60}\n")
+                        outfile.write(f"FILE: {filepath}\n")
+                        outfile.write(f"{'='*60}\n\n")
+                        outfile.write(content)
+                        outfile.write("\n\n")
+                        
+                        print(f"Added: {filepath}")
+                        
+                    except Exception as e:
+                        print(f"Skipped {filepath} (Error: {e})")
+
+    print(f"\nDone! All important files have been combined into '{OUTPUT_FILE}'.")
+
+if __name__ == "__main__":
+    combine_files()
+
+============================================================
+FILE: .\config.py
+============================================================
+
+import os
+
+# ============================================================
+# CONFIGURATION
+# ============================================================
+MAX_TRANSLATION_WORKERS = 8
+MAX_CHARS_PER_CHUNK = 3000
+VLC_ORANGE = "#ff8c00"
+DARK_BG = "#121212"
+PANEL_BG = "#1e1e1e"
+
+# ============================================================
+# DIRECTORY SETUP
+# ============================================================
+try:
+    if os.name == 'nt' and os.getenv('APPDATA'):
+        BASE_DIR = os.path.join(os.getenv('APPDATA'), 'UniversalSubtitles')
+    else:
+        BASE_DIR = os.path.join(os.path.expanduser('~'), 'Documents', 'UniversalSubtitles')
+    TEMP_DIR = os.path.join(BASE_DIR, "temp_audio")
+    SUB_DIR  = os.path.join(BASE_DIR, "subtitles")
+    os.makedirs(TEMP_DIR, exist_ok=True)
+    os.makedirs(SUB_DIR,  exist_ok=True)
+except Exception:
+    TEMP_DIR = os.path.join(os.getcwd(), "temp_audio")
+    SUB_DIR  = os.path.join(os.getcwd(), "subtitles")
+    os.makedirs(TEMP_DIR, exist_ok=True)
+    os.makedirs(SUB_DIR,  exist_ok=True)
+
+# ============================================================
+# LANGUAGE DICTIONARIES
+# ============================================================
+LANGUAGES = {
+    "Afrikaans": "af", "Albanian": "sq", "Amharic": "am", "Arabic": "ar",
+    "Armenian": "hy", "Azerbaijani": "az", "Basque": "eu", "Belarusian": "be",
+    "Bengali": "bn", "Bosnian": "bs", "Bulgarian": "bg", "Catalan": "ca",
+    "Cebuano": "ceb", "Chinese (Simplified)": "zh-CN", "Chinese (Traditional)": "zh-TW",
+    "Croatian": "hr", "Czech": "cs", "Danish": "da", "Dutch": "nl", "English": "en",
+    "Estonian": "et", "Filipino": "tl", "Finnish": "fi", "French": "fr", "Georgian": "ka",
+    "German": "de", "Greek": "el", "Gujarati": "gu", "Hebrew": "he", "Hindi": "hi",
+    "Hungarian": "hu", "Icelandic": "is", "Indonesian": "id", "Irish": "ga", "Italian": "it",
+    "Japanese": "ja", "Javanese": "jv", "Kannada": "kn", "Kazakh": "kk", "Khmer": "km",
+    "Korean": "ko", "Latin": "la", "Latvian": "lv", "Lithuanian": "lt", "Macedonian": "mk",
+    "Malay": "ms", "Malayalam": "ml", "Marathi": "mr", "Mongolian": "mn", "Nepali": "ne",
+    "Norwegian": "no", "Persian": "fa", "Polish": "pl", "Portuguese": "pt", "Punjabi": "pa",
+    "Romanian": "ro", "Russian": "ru", "Serbian": "sr", "Sinhala": "si", "Slovak": "sk",
+    "Slovenian": "sl", "Spanish": "es", "Swahili": "sw", "Swedish": "sv", "Tamil": "ta",
+    "Telugu": "te", "Thai": "th", "Turkish": "tr", "Ukrainian": "uk", "Urdu": "ur",
+    "Vietnamese": "vi", "Welsh": "cy"
+}
+
+WHISPER_LANGUAGES = {
+    "Auto Detect (Recommended)": None,
+    "Afrikaans": "af", "Arabic": "ar", "Armenian": "hy", "Azerbaijani": "az",
+    "Belarusian": "be", "Bosnian": "bs", "Bulgarian": "bg", "Catalan": "ca",
+    "Chinese": "zh", "Croatian": "hr", "Czech": "cs", "Danish": "da",
+    "Dutch": "nl", "English": "en", "Estonian": "et", "Finnish": "fi",
+    "French": "fr", "Galician": "gl", "German": "de", "Greek": "el",
+    "Hebrew": "he", "Hindi": "hi", "Hungarian": "hu", "Icelandic": "is",
+    "Indonesian": "id", "Italian": "it", "Japanese": "ja", "Kannada": "kn",
+    "Kazakh": "kk", "Korean": "ko", "Latvian": "lv", "Lithuanian": "lt",
+    "Macedonian": "mk", "Malay": "ms", "Malayalam": "ml", "Marathi": "mr",
+    "Maori": "mi", "Nepali": "ne", "Norwegian": "no", "Persian": "fa",
+    "Polish": "pl", "Portuguese": "pt", "Romanian": "ro", "Russian": "ru",
+    "Serbian": "sr", "Slovak": "sk", "Slovenian": "sl", "Spanish": "es",
+    "Swahili": "sw", "Swedish": "sv", "Tagalog": "tl", "Tamil": "ta",
+    "Telugu": "te", "Thai": "th", "Turkish": "tr", "Ukrainian": "uk",
+    "Urdu": "ur", "Vietnamese": "vi", "Welsh": "cy", "Yoruba": "yo"
+}
+
+COMMON_FONTS = [
+    "Arial", "Segoe UI", "Calibri", "Verdana", "Tahoma", "Trebuchet MS",
+    "Times New Roman", "Georgia", "Courier New", "Impact", "Comic Sans MS",
+    "Helvetica Neue", "Open Sans", "Roboto", "Ubuntu"
+]
+
+============================================================
+FILE: .\engines.py
+============================================================
+
+import re
+import time
+import requests
+import subprocess
+import os
+from deep_translator import GoogleTranslator
+
+# --- FIX: Imported resource_path ---
+from utils import parse_srt, resource_path
+import config
+
+def split_text_for_translation(text, max_chars=3000):
+    if len(text) <= max_chars: return [text]
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+    chunks, current = [], ""
+    for sentence in sentences:
+        if len(current) + len(sentence) + 1 <= max_chars:
+            current = (current + " " + sentence).strip()
+        else:
+            if current: chunks.append(current)
+            if len(sentence) > max_chars:
+                for i in range(0, len(sentence), max_chars):
+                    chunks.append(sentence[i:i + max_chars])
+                current = ""
+            else:
+                current = sentence
+    if current: chunks.append(current)
+    return chunks if chunks else [text]
+
+def translate_single_chunk(text, target_code, romanize=False):
+    for _ in range(3):
+        try:
+            if not romanize:
+                res = GoogleTranslator(source='auto', target=target_code).translate(text)
+                if res: return res
+            else:
+                url    = "https://translate.googleapis.com/translate_a/single"
+                params = {"client": "gtx", "sl": "auto", "tl": target_code,
+                          "dt": ["t", "rm"], "q": text}
+                resp   = requests.get(url, params=params, timeout=15)
+                if resp.status_code == 200:
+                    data     = resp.json()
+                    romanized = "".join(p[2] for p in data[0] if len(p) > 2 and p[2])
+                    normal    = "".join(p[0] for p in data[0] if p[0])
+                    return romanized.strip() or normal.strip() or text
+        except Exception:
+            time.sleep(1.5)
+    return text
+
+def translate_text(eng_text, target_code, romanize=False):
+    if target_code == "en" or not eng_text.strip():
+        return eng_text
+    chunks = split_text_for_translation(eng_text, config.MAX_CHARS_PER_CHUNK)
+    return " ".join(translate_single_chunk(c, target_code, romanize) for c in chunks)
+
+def transcribe_audio_chunk(chunk_path, provider, api_key, source_lang=None):
+    url   = ("https://api.groq.com/openai/v1/audio/transcriptions"
+              if "Groq" in provider else "https://api.openai.com/v1/audio/transcriptions")
+    model = "whisper-large-v3" if "Groq" in provider else "whisper-1"
+
+    data = {"model": model, "response_format": "verbose_json"}
+    if source_lang:
+        data["language"] = source_lang
+
+    with open(chunk_path, "rb") as f:
+        response = requests.post(
+            url, headers={"Authorization": f"Bearer {api_key}"},
+            files={"file": (os.path.basename(chunk_path), f, "audio/mp4")},
+            data=data, timeout=300
+        )
+        
+    if response.status_code != 200:
+        if response.status_code == 429:
+            raise Exception(f"{provider} API Error: You have exceeded your current quota. Please check your plan and billing details.")
+        elif response.status_code == 401:
+            raise Exception(f"{provider} API Error: Invalid API Key. Please verify your credentials.")
+        else:
+            raise Exception(f"API Error {response.status_code}:\n{response.text[:400]}")
+            
+    return response.json()
+
+def detect_sync_offset(video_path, srt_path, status_callback=None):
+    segments = parse_srt(srt_path)
+    if not segments: return None, "No subtitles found in file."
+
+    first_sub_time = segments[0]['start']
+    if status_callback:
+        status_callback("Analyzing audio for auto-sync (may take ~30s)...")
+
+    try:
+        cf  = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+        
+        # --- FIX: Use bundled ffmpeg path instead of system path ---
+        ffmpeg_path = resource_path(os.path.join("bin", "ffmpeg.exe"))
+        
+        cmd = [
+            ffmpeg_path, "-i", video_path, "-t", "300",
+            "-af", "silencedetect=noise=-35dB:d=0.3", "-f", "null", "-"
+        ]
+        result = subprocess.run(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE,
+                                creationflags=cf, timeout=120)
+        stderr = result.stderr.decode('utf-8', errors='ignore')
+
+        silence_ends = [float(x) for x in re.findall(r'silence_end: ([\d.]+)', stderr)]
+        first_speech = silence_ends[0] if silence_ends else 0.0
+
+        offset = round(first_speech - first_sub_time, 2)
+        info   = (f"First speech at {first_speech:.2f}s  |  "
+                  f"First subtitle at {first_sub_time:.2f}s  |  "
+                  f"Suggested offset: {offset:+.2f}s")
+        return offset, info
+    except subprocess.TimeoutExpired:
+        return None, "Audio analysis timed out."
+    except Exception as e:
+        return None, f"Auto-detect failed: {e}"
+
+============================================================
+FILE: .\innofile.iss
+============================================================
+
+#define MyAppName "Universal AI Subtitle Translator"
+#define MyAppVersion "4.0.0.0"
+#define MyAppPublisher "Joel S Raphael"
+#define MyAppExeName "UniversalSubtitles.exe"
+
+[Setup]
+; Basic App Info
+AppName={#MyAppName}
+AppVersion={#MyAppVersion}
+AppPublisher={#MyAppPublisher}
+DefaultDirName={autopf}\UniversalSubtitleToolkit
+DisableProgramGroupPage=yes
+PrivilegesRequired=lowest
+OutputDir=Output
+OutputBaseFilename=UniversalSubtitles_Setup
+SetupIconFile=logo.ico
+Compression=lzma
+SolidCompression=yes
+WizardStyle=modern
+
+; This is very important for MSIX conversion later:
+UninstallDisplayIcon={app}\{#MyAppExeName}
+
+; ----------------------------------------------------------------------
+; REMOVED [Tasks] section completely.
+; We no longer ask for a Desktop icon to prevent Microsoft Store duplication.
+; ----------------------------------------------------------------------
+
+[Files]
+; IMPORTANT: Make sure this points to your PyInstaller "dist\UniversalSubtitles" folder!
+Source: "dist\UniversalSubtitles\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist\UniversalSubtitles\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Include the logo for the installer/app icon
+Source: "logo.ico"; DestDir: "{app}"; Flags: ignoreversion
+
+; ---> NEW LINE: Install the VLC Lua Extension automatically <---
+Source: "universal_subtitles.lua"; DestDir: "{userappdata}\vlc\lua\extensions"; Flags: ignoreversion
+
+[Icons]
+; Keep ONLY the Start Menu shortcut. 
+Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\logo.ico"
+
+[Run]
+Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+
+============================================================
+FILE: .\main.py
+============================================================
+
+import tkinter as tk
+from tkinter import filedialog, messagebox, ttk, colorchooser
+import threading
+import os
+import subprocess
+import concurrent.futures
+import sys
+import re
+
+# Custom Modular Imports
+import config
+from utils import clean_path, format_timestamp, parse_srt, get_available_subtitles, detect_paired_file, generate_ass_content, resource_path
+from engines import transcribe_audio_chunk, translate_text, detect_sync_offset
+from vlc_integration import launch_vlc_preview, apply_subtitle_to_vlc, install_vlc_extension
+from ui_windows import show_srt_preview, show_style_preview, open_history
+
+# Secure API Key Storage
+from security import save_api_key, load_api_key
+
+# ============================================================
+# HELPER / CALLBACKS
+# ============================================================
+def update_status(text):
+    if app and status_label:
+        app.after(0, lambda: status_label.config(text=f"Status: {text}"))
+
+def update_progress(done, total, label=""):
+    pct = int((done / total) * 100) if total > 0 else 0
+    if app and progress_var:  app.after(0, lambda: progress_var.set(pct))
+    if label and app and progress_label:
+        app.after(0, lambda: progress_label.config(text=f"{done}/{total} {label}"))
+
+def populate_all_tabs(srt_path):
+    app.after(0, lambda: trans_srt_var.set(srt_path))
+    app.after(0, lambda: sync_srt_var.set(srt_path))
+    app.after(0, lambda: custom_srt_var.set(srt_path))
+
+# ============================================================
+# WORKFLOW LOGIC
+# ============================================================
+def run_generation():
+    video_path       = clean_path(gen_video_var.get().strip())
+    target_lang      = gen_lang_var.get()
+    api_key          = api_key_var.get().strip()
+    provider         = provider_var.get()
+    romanize         = gen_romanize_var.get()
+    source_lang_name = gen_source_lang_var.get()
+    source_lang_code = config.WHISPER_LANGUAGES.get(source_lang_name)
+
+    if not video_path: return messagebox.showerror("Error", "Please select a video file!")
+    if not os.path.exists(video_path): return messagebox.showerror("Error", "Video file not found!")
+    if not api_key: return messagebox.showerror("Error", "Please enter your API Key!")
+
+    # Securely save the API key to Windows Credential Manager
+    save_api_key(api_key)
+
+    def _task():
+        try:
+            app.after(0, lambda: gen_btn.config(state=tk.DISABLED))
+            if os.path.exists(config.TEMP_DIR):
+                for fn in os.listdir(config.TEMP_DIR):
+                    try: os.remove(os.path.join(config.TEMP_DIR, fn))
+                    except: pass
+
+            update_status("Compressing audio for AI (Wait ~15s)...")
+            chunk_pattern = os.path.join(config.TEMP_DIR, "chunk_%03d.m4a")
+            cf  = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+            
+            # --- FIX: Use bundled ffmpeg path instead of system path ---
+            ffmpeg_path = resource_path(os.path.join("bin", "ffmpeg.exe"))
+            
+            cmd = [ffmpeg_path, "-y", "-i", video_path, "-vn", "-c:a", "aac", "-b:a", "64k",
+                   "-ar", "16000", "-ac", "1", "-af", "loudnorm", "-f", "segment",
+                   "-segment_time", "600", chunk_pattern]
+
+            proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=cf)
+            if proc.returncode != 0:
+                raise Exception(f"FFmpeg failed. Is the file a valid video?\n\n{proc.stderr.decode('utf-8', errors='ignore')[-400:]}")
+
+            chunks = sorted([f for f in os.listdir(config.TEMP_DIR) if f.endswith('.m4a')])
+            if not chunks:
+                raise Exception("No audio chunks extracted — the video may have no audio track.")
+
+            all_segments = []
+            for i, chunk in enumerate(chunks):
+                lang_info = f" ({source_lang_name})" if source_lang_code else " (Auto-Detect)"
+                update_status(f"Transcribing Part {i+1}/{len(chunks)}{lang_info}...")
+                update_progress(i, len(chunks), "parts")
+
+                ai_data = transcribe_audio_chunk(os.path.join(config.TEMP_DIR, chunk), provider, api_key, source_lang_code)
+                offset = i * 600
+                for seg in ai_data.get("segments", []):
+                    text = seg["text"].strip()
+                    if text:
+                        all_segments.append({"start": seg["start"] + offset, "end": seg["end"] + offset, "text": text})
+
+            if not all_segments: raise Exception("No speech detected.")
+
+            target_code = config.LANGUAGES.get(target_lang, "en")
+            if target_code != "en":
+                mode = "Manglish/Hinglish" if romanize else "Native Script"
+                update_status(f"Translating {len(all_segments)} lines ({mode})...")
+                completed = 0
+                def do_trans(seg):
+                    seg["text"] = translate_text(seg["text"], target_code, romanize)
+                    return seg
+                with concurrent.futures.ThreadPoolExecutor(max_workers=config.MAX_TRANSLATION_WORKERS) as exe:
+                    futures = [exe.submit(do_trans, seg) for seg in all_segments]
+                    for _ in concurrent.futures.as_completed(futures):
+                        completed += 1
+                        update_progress(completed, len(all_segments), "lines")
+
+            srt_content = "".join(f"{i+1}\n{format_timestamp(s['start'])} --> {format_timestamp(s['end'])}\n{s['text']}\n\n"
+                                  for i, s in enumerate(all_segments) if s['text'])
+            suffix   = f"_{target_lang}_Romanized" if romanize else f"_{target_lang}"
+            srt_name = f"{os.path.splitext(os.path.basename(video_path))[0]}{suffix}.srt"
+            srt_path = clean_path(os.path.join(config.SUB_DIR, srt_name))
+
+            with open(srt_path, 'w', encoding='utf-8') as f: f.write(srt_content)
+            for fn in os.listdir(config.TEMP_DIR):
+                try: os.remove(os.path.join(config.TEMP_DIR, fn))
+                except: pass
+
+            update_status(f"✅ Done! {len(all_segments)} subtitle lines generated.")
+            update_progress(100, 100, "%")
+            populate_all_tabs(srt_path)
+            apply_subtitle_to_vlc(app, srt_path, f"✅ Subtitles Generated!\n{len(all_segments)} lines | {target_lang}")
+
+        except Exception as e:
+            app.after(0, lambda: messagebox.showerror("Generation Error", str(e)))
+            update_status("Error occurred.")
+        finally:
+            app.after(0, lambda: gen_btn.config(state=tk.NORMAL))
+    threading.Thread(target=_task, daemon=True).start()
+
+def run_translation():
+    srt_path    = clean_path(trans_srt_var.get().strip())
+    target_lang = trans_lang_var.get()
+    romanize    = trans_romanize_var.get()
+    if not srt_path or not os.path.exists(srt_path): return messagebox.showerror("Error", "Valid SRT file not found!")
+
+    def _task():
+        try:
+            app.after(0, lambda: trans_btn.config(state=tk.DISABLED))
+            update_status("Parsing SRT file...")
+            segments = parse_srt(srt_path)
+            if not segments: raise Exception("Could not parse the SRT file.")
+
+            target_code = config.LANGUAGES.get(target_lang, "en")
+            errors = 0
+            if target_code != "en":
+                mode = "Manglish/Hinglish" if romanize else "Native Script"
+                update_status(f"Translating {len(segments)} lines to {target_lang} ({mode})...")
+                completed = 0
+                def do_trans(seg):
+                    nonlocal errors
+                    try: seg["text"] = translate_text(seg["text"], target_code, romanize)
+                    except Exception: errors += 1
+                    return seg
+                with concurrent.futures.ThreadPoolExecutor(max_workers=config.MAX_TRANSLATION_WORKERS) as exe:
+                    futures = [exe.submit(do_trans, seg) for seg in segments]
+                    for _ in concurrent.futures.as_completed(futures):
+                        completed += 1
+                        update_progress(completed, len(segments), "lines")
+
+            srt_content = "".join(f"{i+1}\n{format_timestamp(s['start'])} --> {format_timestamp(s['end'])}\n{s['text']}\n\n"
+                                  for i, s in enumerate(segments))
+            base      = os.path.splitext(os.path.basename(srt_path))[0]
+            suffix    = f"_{target_lang}_Romanized" if romanize else f"_{target_lang}"
+            save_path = clean_path(os.path.join(config.SUB_DIR, f"{base}{suffix}.srt"))
+
+            with open(save_path, 'w', encoding='utf-8') as f: f.write(srt_content)
+            note = f"\n⚠️ {errors} errors" if errors else ""
+            update_status(f"✅ Translation Done!{note}")
+            update_progress(100, 100, "%")
+            populate_all_tabs(save_path)
+            apply_subtitle_to_vlc(app, save_path, f"✅ Translation Finished!\n{len(segments)} lines → {target_lang}{note}")
+        except Exception as e:
+            app.after(0, lambda: messagebox.showerror("Translation Error", str(e)))
+            update_status("Error occurred.")
+        finally:
+            app.after(0, lambda: trans_btn.config(state=tk.NORMAL))
+    threading.Thread(target=_task, daemon=True).start()
+
+def run_auto_sync():
+    srt_path   = clean_path(sync_srt_var.get().strip())
+    video_path = clean_path(gen_video_var.get().strip())
+    if not srt_path or not video_path: return messagebox.showerror("Error", "Select Video in Tab 1 and an SRT file here!")
+
+    def _task():
+        try:
+            app.after(0, lambda: auto_sync_btn.config(state=tk.DISABLED, text="Analyzing..."))
+            offset, info = detect_sync_offset(video_path, srt_path, update_status)
+            if offset is None:
+                app.after(0, lambda: messagebox.showerror("Auto-Sync Failed", info))
+                update_status("Auto-sync failed.")
+                return
+            offset_str = f"{offset:+.2f}"
+            app.after(0, lambda: sync_offset_var.set(offset_str))
+            update_status(f"✅ Auto-detected offset: {offset_str}s")
+            app.after(0, lambda: messagebox.showinfo("🎯 Auto-Sync Result", f"Detected Offset: {offset_str}s\n\n{info}\nClick 'SYNC & APPLY' to save!"))
+        except Exception as e:
+            app.after(0, lambda: messagebox.showerror("Error", str(e)))
+            update_status("Error.")
+        finally:
+            app.after(0, lambda: auto_sync_btn.config(state=tk.NORMAL, text="🔍 Auto Detect Offset"))
+    threading.Thread(target=_task, daemon=True).start()
+
+def run_sync():
+    srt_path = clean_path(sync_srt_var.get().strip())
+    try: offset_val = float(sync_offset_var.get().strip().replace('+', ''))
+    except ValueError: return messagebox.showerror("Error", "Offset must be a number")
+    if not srt_path or not os.path.exists(srt_path): return messagebox.showerror("Error", "SRT file not found!")
+
+    def _task():
+        try:
+            app.after(0, lambda: sync_btn.config(state=tk.DISABLED))
+            update_status("Adjusting SRT timestamps...")
+            segments = parse_srt(srt_path)
+            for seg in segments:
+                seg['start'] = max(0, seg['start'] + offset_val)
+                seg['end']   = max(0.001, seg['end'] + offset_val)
+                if seg['end'] <= seg['start']: seg['end'] = seg['start'] + 0.5
+
+            srt_content = "".join(f"{i+1}\n{format_timestamp(s['start'])} --> {format_timestamp(s['end'])}\n{s['text']}\n\n"
+                                  for i, s in enumerate(segments))
+            base      = re.sub(r'_synced$', '', os.path.splitext(os.path.basename(srt_path))[0])
+            save_path = clean_path(os.path.join(config.SUB_DIR, f"{base}_synced.srt"))
+            with open(save_path, 'w', encoding='utf-8') as f: f.write(srt_content)
+
+            update_status(f"✅ Sync done! Offset: {offset_val:+.2f}s")
+            update_progress(100, 100, "%")
+            populate_all_tabs(save_path)
+            apply_subtitle_to_vlc(app, save_path, f"✅ Sync Applied!\nOffset: {offset_val:+.2f} seconds")
+        except Exception as e:
+            app.after(0, lambda: messagebox.showerror("Sync Error", str(e)))
+            update_status("Error.")
+        finally:
+            app.after(0, lambda: sync_btn.config(state=tk.NORMAL))
+    threading.Thread(target=_task, daemon=True).start()
+
+def pick_color(var, btn):
+    initial = var.get() if var.get().startswith('#') else '#ffffff'
+    result  = colorchooser.askcolor(color=initial, title="Pick Color")
+    if result and result[1]:
+        var.set(result[1])
+        btn.config(bg=result[1], fg="white" if result[1].lower() in ['#000000','#111111','#222222','#333333'] else "black")
+
+def run_export_ass():
+    srt_path = clean_path(custom_srt_var.get().strip())
+    if not srt_path or not os.path.exists(srt_path): return messagebox.showerror("Error", "File not found!")
+
+    def _task():
+        try:
+            app.after(0, lambda: export_ass_btn.config(state=tk.DISABLED))
+            update_status("Generating styled ASS subtitle...")
+            segments = parse_srt(srt_path)
+            if not segments: raise Exception("Could not parse SRT file.")
+
+            style = {
+                "font_name": custom_font_var.get() or "Arial",
+                "font_size": custom_size_var.get(),
+                "primary_color": custom_text_color_var.get(),
+                "outline_color": custom_outline_color_var.get(),
+                "background": custom_bg_var.get(),
+                "bold": custom_bold_var.get(),
+                "italic": custom_italic_var.get(),
+                "outline": custom_outline_sz_var.get(),
+                "shadow": custom_shadow_var.get(),
+                "alignment": 8 if custom_position_var.get() == "top" else 2,
+            }
+            ass_content = generate_ass_content(segments, style)
+            base        = os.path.splitext(os.path.basename(srt_path))[0]
+            ass_path    = clean_path(os.path.join(config.SUB_DIR, f"{base}_styled.ass"))
+            with open(ass_path, 'w', encoding='utf-8') as f: f.write(ass_content)
+
+            update_status("✅ Styled ASS subtitle exported!")
+            update_progress(100, 100, "%")
+            apply_subtitle_to_vlc(app, ass_path, "✅ Styled Subtitle Exported as .ASS")
+        except Exception as e:
+            app.after(0, lambda: messagebox.showerror("Export Error", str(e)))
+            update_status("Error.")
+        finally:
+            app.after(0, lambda: export_ass_btn.config(state=tk.NORMAL))
+    threading.Thread(target=_task, daemon=True).start()
+
+def on_video_change(*args):
+    v_path = gen_video_var.get().strip()
+    subs   = get_available_subtitles(v_path)
+    if trans_srt_cb:  trans_srt_cb['values']  = subs
+    if sync_srt_cb:   sync_srt_cb['values']   = subs
+    if custom_srt_cb: custom_srt_cb['values'] = subs
+    best = detect_paired_file(v_path, "srt")
+    if best: populate_all_tabs(best)
+    elif subs:
+        if not trans_srt_var.get(): populate_all_tabs(subs[0])
+
+def browse_srt(var):
+    f = filedialog.askopenfilename(filetypes=[("Subtitles", "*.srt *.ass")])
+    if f: var.set(clean_path(f))
+
+def browse_video(var):
+    f = filedialog.askopenfilename(filetypes=[("Video", "*.mp4 *.mkv *.avi *.ts *.mov *.wmv")])
+    if f: var.set(clean_path(f))
+
+# ============================================================
+# MAIN UI SETUP
+# ============================================================
+app = tk.Tk()
+app.title("Universal Subtitles Toolkit (VLC Edition)")
+app.geometry("560x720")
+app.configure(bg=config.DARK_BG)
+app.resizable(False, False)
+
+try: app.iconbitmap(resource_path("logo.ico"))
+except: pass
+
+style = ttk.Style()
+style.theme_use('clam')
+style.configure('TCombobox', fieldbackground="white", background="white", foreground="black", borderwidth=0)
+style.map('TCombobox', fieldbackground=[('readonly', 'white'), ('focus', 'white')],
+          foreground=[('readonly', 'black'), ('focus', 'black')],
+          selectbackground=[('readonly', config.VLC_ORANGE)], selectforeground=[('readonly', 'black')])
+
+provider_var      = tk.StringVar(value="Groq (Lightning Fast)")
+
+# -> Automatically Load API Key on Startup!
+api_key_var       = tk.StringVar(value=load_api_key())
+
+gen_video_var     = tk.StringVar()
+gen_lang_var      = tk.StringVar(value="English")
+gen_romanize_var  = tk.BooleanVar(value=False)
+gen_source_lang_var = tk.StringVar(value="Auto Detect (Recommended)")
+trans_srt_var     = tk.StringVar()
+trans_lang_var    = tk.StringVar(value="Malayalam")
+trans_romanize_var = tk.BooleanVar(value=False)
+sync_srt_var      = tk.StringVar()
+sync_offset_var   = tk.StringVar(value="+0.0")
+custom_srt_var        = tk.StringVar()
+custom_font_var       = tk.StringVar(value="Arial")
+custom_size_var       = tk.IntVar(value=20)
+custom_text_color_var = tk.StringVar(value="#FFFFFF")
+custom_outline_color_var = tk.StringVar(value="#000000")
+custom_bg_var         = tk.BooleanVar(value=True)
+custom_bold_var       = tk.BooleanVar(value=False)
+custom_italic_var     = tk.BooleanVar(value=False)
+custom_outline_sz_var = tk.IntVar(value=2)
+custom_shadow_var     = tk.IntVar(value=1)
+custom_position_var   = tk.StringVar(value="bottom")
+progress_var = tk.IntVar(value=0)
+gen_video_var.trace_add("write", on_video_change)
+
+style_vars = {
+    'srt_path': custom_srt_var, 'font_name': custom_font_var, 'font_size': custom_size_var,
+    'text_color': custom_text_color_var, 'outline_color': custom_outline_color_var,
+    'bg': custom_bg_var, 'bold': custom_bold_var, 'italic': custom_italic_var,
+    'outline_sz': custom_outline_sz_var, 'shadow': custom_shadow_var, 'position': custom_position_var
+}
+
+hdr = tk.Frame(app, bg=config.DARK_BG); hdr.pack(fill=tk.X, padx=20, pady=(14, 5))
+tk.Label(hdr, text="UNIVERSAL SUBTITLE TOOLKIT", bg=config.DARK_BG, fg=config.VLC_ORANGE, font=("Segoe UI", 14, "bold")).pack(side=tk.LEFT)
+tk.Button(hdr, text="📜 History", bg="#333", fg="white", relief=tk.FLAT, font=("Segoe UI", 9), command=lambda: open_history(app, populate_all_tabs), padx=8).pack(side=tk.RIGHT)
+tk.Button(hdr, text="🔌 Install VLC Extension", bg="#333", fg=config.VLC_ORANGE, relief=tk.FLAT, font=("Segoe UI", 9, "bold"), command=lambda: install_vlc_extension(app), padx=8).pack(side=tk.RIGHT, padx=(0, 10))
+
+tab_frame = tk.Frame(app, bg=config.DARK_BG); tab_frame.pack(fill=tk.X, padx=20, pady=5)
+def show_tab(idx):
+    for i, btn in enumerate(tab_btns):
+        btn.config(bg=config.VLC_ORANGE if i == idx else config.PANEL_BG, fg="black" if i == idx else "white", font=("Segoe UI", 8, "bold" if i == idx else "normal"))
+    for i, frame in enumerate(frames):
+        if i == idx: frame.grid(row=0, column=0, sticky="nsew")
+        else: frame.grid_forget()
+
+tab_labels = ["1. Generate (AI)", "2. Translate", "3. Sync", "4. Customize"]
+tab_btns = [tk.Button(tab_frame, text=t, relief=tk.FLAT, width=13, command=lambda idx=i: show_tab(idx)) for i, t in enumerate(tab_labels)]
+for btn in tab_btns: btn.pack(side=tk.LEFT, padx=2)
+
+cc = tk.Frame(app, bg=config.PANEL_BG, bd=1, relief=tk.SOLID); cc.pack(fill=tk.BOTH, expand=True, padx=20, pady=5)
+cc.grid_rowconfigure(0, weight=1); cc.grid_columnconfigure(0, weight=1)
+frame_gen, frame_trans, frame_sync, frame_custom = tk.Frame(cc, bg=config.PANEL_BG), tk.Frame(cc, bg=config.PANEL_BG), tk.Frame(cc, bg=config.PANEL_BG), tk.Frame(cc, bg=config.PANEL_BG)
+frames = [frame_gen, frame_trans, frame_sync, frame_custom]
+
+# Tab 1
+tk.Label(frame_gen, text="Provider & API Key:", bg=config.PANEL_BG, fg="white", font=("Segoe UI", 9)).pack(pady=(12, 2))
+ttk.Combobox(frame_gen, textvariable=provider_var, values=["Groq (Lightning Fast)", "OpenAI (Standard)"], state="readonly", width=40).pack()
+f_api = tk.Frame(frame_gen, bg=config.PANEL_BG)
+f_api.pack(pady=4)
+tk.Entry(f_api, textvariable=api_key_var, show="*", width=35, bg=config.DARK_BG, fg="white", insertbackground="white", border=0).pack(side=tk.LEFT, ipady=3, padx=(0, 5))
+
+def on_save_key():
+    key = api_key_var.get().strip()
+    if key:
+        save_api_key(key)
+        messagebox.showinfo("Saved", "API Key saved securely!")
+    else:
+        messagebox.showwarning("Empty", "Please paste an API key first.")
+
+tk.Button(f_api, text="💾 Save", bg="#333", fg="white", relief=tk.FLAT, command=on_save_key, padx=5).pack(side=tk.LEFT)
+tk.Label(frame_gen, text="Select Video:", bg=config.PANEL_BG, fg="white", font=("Segoe UI", 9)).pack(pady=(6, 2))
+f1 = tk.Frame(frame_gen, bg=config.PANEL_BG); f1.pack()
+tk.Entry(f1, textvariable=gen_video_var, width=33, bg=config.DARK_BG, fg="white", border=0).pack(side=tk.LEFT, padx=5, ipady=3)
+tk.Button(f1, text="Browse", command=lambda: browse_video(gen_video_var), bg="#333", fg="white", relief=tk.FLAT).pack(side=tk.LEFT)
+tk.Label(frame_gen, text="Audio / Source Language:", bg=config.PANEL_BG, fg="white", font=("Segoe UI", 9)).pack(pady=(8, 2))
+ttk.Combobox(frame_gen, textvariable=gen_source_lang_var, values=sorted(config.WHISPER_LANGUAGES.keys()), state="readonly", width=40).pack()
+tk.Label(frame_gen, text="⚠️ Use 'Auto Detect' for non-English videos", bg=config.PANEL_BG, fg="#888", font=("Segoe UI", 8)).pack()
+tk.Label(frame_gen, text="Translate Subtitles To:", bg=config.PANEL_BG, fg="white", font=("Segoe UI", 9)).pack(pady=(8, 2))
+ttk.Combobox(frame_gen, textvariable=gen_lang_var, values=sorted(config.LANGUAGES.keys()), state="readonly", width=40).pack()
+tk.Checkbutton(frame_gen, text="Write in English Letters (e.g. Manglish, Hinglish)", variable=gen_romanize_var, bg=config.PANEL_BG, fg="#a0a0a0", activebackground=config.PANEL_BG, selectcolor=config.DARK_BG).pack(pady=(4, 0))
+
+row_gen = tk.Frame(frame_gen, bg=config.PANEL_BG); row_gen.pack(pady=12)
+gen_btn = tk.Button(row_gen, text="⚡ GENERATE SUBTITLES", bg=config.VLC_ORANGE, fg="black", font=("Segoe UI", 10, "bold"), relief=tk.FLAT, command=run_generation)
+gen_btn.pack(side=tk.LEFT, ipadx=10, ipady=6)
+tk.Button(row_gen, text="👁 Preview", bg="#2a2a2a", fg=config.VLC_ORANGE, relief=tk.FLAT, font=("Segoe UI", 9, "bold"), padx=8, pady=6, command=lambda: show_srt_preview(app, clean_path(trans_srt_var.get()), "👁 Preview — Generated Subtitle")).pack(side=tk.LEFT, padx=(6, 0))
+tk.Button(row_gen, text="▶ VLC Preview", bg="#2a2a2a", fg="#4CAF50", relief=tk.FLAT, font=("Segoe UI", 9, "bold"), padx=8, pady=6, command=lambda: launch_vlc_preview(clean_path(gen_video_var.get()), clean_path(trans_srt_var.get()))).pack(side=tk.LEFT, padx=(6, 0))
+
+# Tab 2
+tk.Label(frame_trans, text="Select Subtitle File:", bg=config.PANEL_BG, fg="white", font=("Segoe UI", 9)).pack(pady=(28, 2))
+f2 = tk.Frame(frame_trans, bg=config.PANEL_BG); f2.pack()
+trans_srt_cb = ttk.Combobox(f2, textvariable=trans_srt_var, state="normal", width=38)
+trans_srt_cb.pack(side=tk.LEFT, padx=5)
+tk.Button(f2, text="Browse", command=lambda: browse_srt(trans_srt_var), bg="#333", fg="white", relief=tk.FLAT).pack(side=tk.LEFT)
+tk.Label(frame_trans, text="Translate To:", bg=config.PANEL_BG, fg="white", font=("Segoe UI", 9)).pack(pady=(18, 2))
+ttk.Combobox(frame_trans, textvariable=trans_lang_var, values=sorted(config.LANGUAGES.keys()), state="readonly", width=40).pack()
+tk.Checkbutton(frame_trans, text="Write in English Letters (e.g. Manglish, Hinglish)", variable=trans_romanize_var, bg=config.PANEL_BG, fg="#a0a0a0", activebackground=config.PANEL_BG, selectcolor=config.DARK_BG).pack(pady=(5, 0))
+
+row_trans = tk.Frame(frame_trans, bg=config.PANEL_BG); row_trans.pack(pady=15)
+trans_btn = tk.Button(row_trans, text="🌐 TRANSLATE & APPLY", bg=config.VLC_ORANGE, fg="black", font=("Segoe UI", 10, "bold"), relief=tk.FLAT, command=run_translation)
+trans_btn.pack(side=tk.LEFT, ipadx=10, ipady=6)
+tk.Button(row_trans, text="👁 Preview", bg="#2a2a2a", fg=config.VLC_ORANGE, relief=tk.FLAT, font=("Segoe UI", 9, "bold"), padx=8, pady=6, command=lambda: show_srt_preview(app, clean_path(trans_srt_var.get()), "👁 Preview — Subtitle File")).pack(side=tk.LEFT, padx=(6, 0))
+tk.Button(row_trans, text="▶ VLC Preview", bg="#2a2a2a", fg="#4CAF50", relief=tk.FLAT, font=("Segoe UI", 9, "bold"), padx=8, pady=6, command=lambda: launch_vlc_preview(clean_path(gen_video_var.get()), clean_path(trans_srt_var.get()))).pack(side=tk.LEFT, padx=(6, 0))
+tk.Label(frame_trans, text="Supports 60+ languages  •  Long texts auto-chunked", bg=config.PANEL_BG, fg="#555", font=("Segoe UI", 8)).pack()
+
+# Tab 3
+tk.Label(frame_sync, text="Select Subtitle File:", bg=config.PANEL_BG, fg="white", font=("Segoe UI", 9)).pack(pady=(12, 2))
+f3 = tk.Frame(frame_sync, bg=config.PANEL_BG); f3.pack()
+sync_srt_cb = ttk.Combobox(f3, textvariable=sync_srt_var, state="normal", width=38); sync_srt_cb.pack(side=tk.LEFT, padx=5)
+tk.Button(f3, text="Browse", command=lambda: browse_srt(sync_srt_var), bg="#333", fg="white", relief=tk.FLAT).pack(side=tk.LEFT)
+
+af = tk.Frame(frame_sync, bg="#252525"); af.pack(fill=tk.X, padx=15, pady=(10, 5))
+tk.Label(af, text="🤖  AUTO-SYNC", bg="#252525", fg=config.VLC_ORANGE, font=("Segoe UI", 9, "bold")).pack(pady=(8, 2))
+tk.Label(af, text="Analyses your video audio to detect first speech\nand calculates the perfect offset automatically.", bg="#252525", fg="#999", font=("Segoe UI", 8), justify="center").pack()
+auto_sync_btn = tk.Button(af, text="🔍 Auto Detect Offset", bg="#444", fg="white", font=("Segoe UI", 9, "bold"), relief=tk.FLAT, command=run_auto_sync)
+auto_sync_btn.pack(pady=(6, 10), ipadx=10, ipady=4)
+
+tk.Label(frame_sync, text="── or set offset manually ──", bg=config.PANEL_BG, fg="#444", font=("Segoe UI", 8)).pack(pady=(2, 0))
+tk.Label(frame_sync, text="Shift Seconds:", bg=config.PANEL_BG, fg="white", font=("Segoe UI", 9)).pack(pady=(6, 2))
+tk.Label(frame_sync, text="+2.5 = delay  •  -1.5 = advance", bg=config.PANEL_BG, fg="#777", font=("Segoe UI", 8)).pack()
+tk.Entry(frame_sync, textvariable=sync_offset_var, width=12, bg=config.DARK_BG, fg="white", border=0, justify="center", font=("Segoe UI", 13, "bold")).pack(pady=4, ipady=3)
+
+row_sync = tk.Frame(frame_sync, bg=config.PANEL_BG); row_sync.pack(pady=10)
+sync_btn = tk.Button(row_sync, text="⏱️ SYNC & APPLY", bg=config.VLC_ORANGE, fg="black", font=("Segoe UI", 10, "bold"), relief=tk.FLAT, command=run_sync)
+sync_btn.pack(side=tk.LEFT, ipadx=10, ipady=6)
+tk.Button(row_sync, text="👁 Preview", bg="#2a2a2a", fg=config.VLC_ORANGE, relief=tk.FLAT, font=("Segoe UI", 9, "bold"), padx=8, pady=6, command=lambda: show_srt_preview(app, clean_path(sync_srt_var.get()), "👁 Preview — Sync File")).pack(side=tk.LEFT, padx=(6, 0))
+tk.Button(row_sync, text="▶ VLC Preview", bg="#2a2a2a", fg="#4CAF50", relief=tk.FLAT, font=("Segoe UI", 9, "bold"), padx=8, pady=6, command=lambda: launch_vlc_preview(clean_path(gen_video_var.get()), clean_path(sync_srt_var.get()))).pack(side=tk.LEFT, padx=(6, 0))
+
+# Tab 4
+tk.Label(frame_custom, text="Select SRT File to Style:", bg=config.PANEL_BG, fg="white", font=("Segoe UI", 9)).pack(pady=(10, 2))
+f4 = tk.Frame(frame_custom, bg=config.PANEL_BG); f4.pack()
+custom_srt_cb = ttk.Combobox(f4, textvariable=custom_srt_var, state="normal", width=34); custom_srt_cb.pack(side=tk.LEFT, padx=5)
+tk.Button(f4, text="Browse", command=lambda: browse_srt(custom_srt_var), bg="#333", fg="white", relief=tk.FLAT).pack(side=tk.LEFT)
+
+opts = tk.Frame(frame_custom, bg=config.PANEL_BG); opts.pack(fill=tk.X, padx=12, pady=6)
+L = tk.Frame(opts, bg=config.PANEL_BG); L.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 8))
+R = tk.Frame(opts, bg=config.PANEL_BG); R.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+tk.Label(L, text="Font Family:", bg=config.PANEL_BG, fg="#aaa", font=("Segoe UI", 8)).pack(anchor="w")
+ttk.Combobox(L, textvariable=custom_font_var, values=config.COMMON_FONTS, state="normal", width=21).pack(anchor="w", pady=(0, 7))
+tk.Label(L, text="Font Size:", bg=config.PANEL_BG, fg="#aaa", font=("Segoe UI", 8)).pack(anchor="w")
+sf = tk.Frame(L, bg=config.PANEL_BG); sf.pack(anchor="w", pady=(0, 7))
+size_disp = tk.Label(sf, text=str(custom_size_var.get()), bg=config.PANEL_BG, fg=config.VLC_ORANGE, width=3, font=("Segoe UI", 9, "bold"))
+custom_size_var.trace_add("write", lambda *a: size_disp.config(text=str(custom_size_var.get())))
+tk.Scale(sf, from_=12, to=48, orient=tk.HORIZONTAL, variable=custom_size_var, bg=config.PANEL_BG, fg="white", highlightthickness=0, troughcolor="#333", activebackground=config.VLC_ORANGE, length=115, showvalue=False).pack(side=tk.LEFT)
+size_disp.pack(side=tk.LEFT, padx=4)
+
+tk.Label(L, text="Text Color:", bg=config.PANEL_BG, fg="#aaa", font=("Segoe UI", 8)).pack(anchor="w")
+text_color_btn = tk.Button(L, text="  ■  Pick Color", bg=custom_text_color_var.get(), fg="black", relief=tk.FLAT, font=("Segoe UI", 8), command=lambda: pick_color(custom_text_color_var, text_color_btn)); text_color_btn.pack(anchor="w", pady=(0, 6))
+tk.Label(L, text="Outline Color:", bg=config.PANEL_BG, fg="#aaa", font=("Segoe UI", 8)).pack(anchor="w")
+outline_color_btn = tk.Button(L, text="  ■  Pick Color", bg=custom_outline_color_var.get(), fg="white", relief=tk.FLAT, font=("Segoe UI", 8), command=lambda: pick_color(custom_outline_color_var, outline_color_btn)); outline_color_btn.pack(anchor="w", pady=(0, 4))
+
+tk.Label(R, text="Style:", bg=config.PANEL_BG, fg="#aaa", font=("Segoe UI", 8)).pack(anchor="w")
+for txt, var in [("Bold", custom_bold_var), ("Italic", custom_italic_var), ("Shadow Box", custom_bg_var)]:
+    tk.Checkbutton(R, text=txt, variable=var, bg=config.PANEL_BG, fg="white", activebackground=config.PANEL_BG, selectcolor=config.DARK_BG, font=("Segoe UI", 9)).pack(anchor="w")
+tk.Label(R, text="Position:", bg=config.PANEL_BG, fg="#aaa", font=("Segoe UI", 8)).pack(anchor="w", pady=(6, 0))
+for txt, val in [("⬇ Bottom (Default)", "bottom"), ("⬆ Top", "top")]:
+    tk.Radiobutton(R, text=txt, variable=custom_position_var, value=val, bg=config.PANEL_BG, fg="white", activebackground=config.PANEL_BG, selectcolor=config.DARK_BG, font=("Segoe UI", 9)).pack(anchor="w")
+tk.Label(R, text="Outline Size (0–4):", bg=config.PANEL_BG, fg="#aaa", font=("Segoe UI", 8)).pack(anchor="w", pady=(5, 0))
+tk.Scale(R, from_=0, to=4, orient=tk.HORIZONTAL, variable=custom_outline_sz_var, bg=config.PANEL_BG, fg="white", highlightthickness=0, troughcolor="#333", activebackground=config.VLC_ORANGE, length=130).pack(anchor="w")
+tk.Label(R, text="Shadow Size (0–3):", bg=config.PANEL_BG, fg="#aaa", font=("Segoe UI", 8)).pack(anchor="w")
+tk.Scale(R, from_=0, to=3, orient=tk.HORIZONTAL, variable=custom_shadow_var, bg=config.PANEL_BG, fg="white", highlightthickness=0, troughcolor="#333", activebackground=config.VLC_ORANGE, length=130).pack(anchor="w")
+
+row_custom = tk.Frame(frame_custom, bg=config.PANEL_BG); row_custom.pack(pady=(8, 3))
+export_ass_btn = tk.Button(row_custom, text="🎨 EXPORT", bg=config.VLC_ORANGE, fg="black", font=("Segoe UI", 10, "bold"), relief=tk.FLAT, command=run_export_ass); export_ass_btn.pack(side=tk.LEFT, ipadx=8, ipady=6)
+tk.Button(row_custom, text="👁 SRT", bg="#2a2a2a", fg=config.VLC_ORANGE, relief=tk.FLAT, font=("Segoe UI", 9, "bold"), padx=6, pady=6, command=lambda: show_srt_preview(app, clean_path(custom_srt_var.get()), "👁 Preview")).pack(side=tk.LEFT, padx=(3, 0))
+tk.Button(row_custom, text="🖥 Style", bg="#1a2a1a", fg="#4CAF50", relief=tk.FLAT, font=("Segoe UI", 9, "bold"), padx=6, pady=6, command=lambda: show_style_preview(app, style_vars)).pack(side=tk.LEFT, padx=(3, 0))
+tk.Button(row_custom, text="▶ VLC", bg="#2a2a2a", fg="#4CAF50", relief=tk.FLAT, font=("Segoe UI", 9, "bold"), padx=6, pady=6, command=lambda: launch_vlc_preview(clean_path(gen_video_var.get()), clean_path(custom_srt_var.get()))).pack(side=tk.LEFT, padx=(3, 0))
+tk.Label(frame_custom, text="ASS format = full styling in VLC", bg=config.PANEL_BG, fg="#555", font=("Segoe UI", 8)).pack()
+
+bot = tk.Frame(app, bg=config.DARK_BG); bot.pack(fill=tk.X, padx=20, pady=(0, 10))
+ttk.Progressbar(bot, variable=progress_var, maximum=100, length=520, mode='determinate').pack()
+progress_label = tk.Label(bot, text="", bg=config.DARK_BG, fg=config.VLC_ORANGE, font=("Segoe UI", 9)); progress_label.pack()
+status_label = tk.Label(bot, text="Status: Ready", bg=config.DARK_BG, fg="#888", font=("Segoe UI", 9)); status_label.pack()
+
+if len(sys.argv) > 1:
+    passed = clean_path(sys.argv[1])
+    if os.path.isfile(passed):
+        if passed.lower().endswith('.srt'):
+            populate_all_tabs(passed)
+            vm = detect_paired_file(passed, "video")
+            if vm: gen_video_var.set(vm)
+        else: gen_video_var.set(passed)
+
+show_tab(0)
+app.mainloop()
+
+============================================================
+FILE: .\security.py
+============================================================
+
+import keyring
+import os
+import base64
+
+SERVICE_NAME = "UniversalSubtitleToolkit"
+ACCOUNT_NAME = "api_key_secure_storage"
+
+# Fallback path if Windows Vault is blocked
+try:
+    FALLBACK_FILE = os.path.join(os.getenv('APPDATA'), 'UniversalSubtitles', '.secure_key')
+except Exception:
+    FALLBACK_FILE = os.path.join(os.getcwd(), '.secure_key')
+
+def save_api_key(api_key):
+    """Saves the API key securely."""
+    if api_key and api_key.strip():
+        try:
+            # Try Windows Credential Manager first
+            keyring.set_password(SERVICE_NAME, ACCOUNT_NAME, api_key.strip())
+        except Exception:
+            # Fallback: Base64 obfuscated file in AppData
+            os.makedirs(os.path.dirname(FALLBACK_FILE), exist_ok=True)
+            with open(FALLBACK_FILE, "wb") as f:
+                f.write(base64.b64encode(api_key.strip().encode()))
+
+def load_api_key():
+    """Retrieves the API key securely."""
+    try:
+        key = keyring.get_password(SERVICE_NAME, ACCOUNT_NAME)
+        if key: return key
+    except Exception:
+        pass
+    
+    # Check fallback if Windows vault failed
+    if os.path.exists(FALLBACK_FILE):
+        try:
+            with open(FALLBACK_FILE, "rb") as f:
+                return base64.b64decode(f.read()).decode()
+        except Exception:
+            pass
+            
+    return ""
+
+============================================================
+FILE: .\ui_windows.py
+============================================================
+
+import tkinter as tk
+import tkinter.filedialog as filedialog
+import tkinter.messagebox as messagebox
+import subprocess
+import os
+import shutil
+import config
+from utils import clean_path, parse_srt, format_timestamp
+
+def show_srt_preview(app, srt_path, title="👁 Subtitle Preview"):
+    if not srt_path:
+        return messagebox.showerror("Preview", "No subtitle file selected!")
+    if not os.path.exists(srt_path):
+        return messagebox.showerror("Preview", f"File not found:\n{srt_path}")
+    try:
+        segments = parse_srt(srt_path)
+    except Exception as e:
+        return messagebox.showerror("Preview", f"Could not read file:\n{e}")
+
+    pw = tk.Toplevel(app)
+    pw.title(title)
+    pw.geometry("620x520")
+    pw.configure(bg=config.DARK_BG)
+    pw.transient(app)
+    pw.resizable(True, True)
+
+    hf = tk.Frame(pw, bg=config.DARK_BG); hf.pack(fill=tk.X, padx=15, pady=(10, 4))
+    tk.Label(hf, text=os.path.basename(srt_path), bg=config.DARK_BG, fg=config.VLC_ORANGE,
+             font=("Segoe UI", 10, "bold")).pack(side=tk.LEFT)
+    tk.Label(hf, text=f"  {len(segments)} lines", bg=config.DARK_BG, fg="#888",
+             font=("Segoe UI", 9)).pack(side=tk.LEFT)
+
+    sf = tk.Frame(pw, bg=config.DARK_BG); sf.pack(fill=tk.X, padx=15, pady=(0, 4))
+    search_var = tk.StringVar()
+    tk.Label(sf, text="Search:", bg=config.DARK_BG, fg="#888", font=("Segoe UI", 8)).pack(side=tk.LEFT)
+    search_entry = tk.Entry(sf, textvariable=search_var, width=28, bg="#2a2a2a", fg="white",
+                            insertbackground="white", border=0, font=("Segoe UI", 9))
+    search_entry.pack(side=tk.LEFT, padx=5, ipady=2)
+    match_label = tk.Label(sf, text="", bg=config.DARK_BG, fg=config.VLC_ORANGE, font=("Segoe UI", 8))
+    match_label.pack(side=tk.LEFT)
+
+    tf = tk.Frame(pw, bg=config.DARK_BG); tf.pack(fill=tk.BOTH, expand=True, padx=15, pady=4)
+    vsb = tk.Scrollbar(tf); vsb.pack(side=tk.RIGHT, fill=tk.Y)
+    txt = tk.Text(tf, bg="#0d0d0d", fg="white", font=("Consolas", 9), yscrollcommand=vsb.set,
+                  border=0, highlightthickness=0, wrap=tk.WORD, selectbackground=config.VLC_ORANGE)
+    txt.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+    vsb.config(command=txt.yview)
+
+    txt.tag_configure("idx",   foreground="#555",     font=("Consolas", 8))
+    txt.tag_configure("time",  foreground=config.VLC_ORANGE, font=("Consolas", 9, "bold"))
+    txt.tag_configure("body",  foreground="#e8e8e8",  font=("Consolas", 9))
+    txt.tag_configure("sep",   foreground="#252525")
+    txt.tag_configure("found", background=config.VLC_ORANGE, foreground="black")
+
+    for seg in segments:
+        txt.insert(tk.END, f"[{seg['index']}]  ", "idx")
+        txt.insert(tk.END, f"{format_timestamp(seg['start'])}  →  {format_timestamp(seg['end'])}\n", "time")
+        txt.insert(tk.END, f"{seg['text']}\n", "body")
+        txt.insert(tk.END, "─" * 70 + "\n", "sep")
+    txt.config(state=tk.DISABLED)
+
+    def do_search(*_):
+        txt.tag_remove("found", "1.0", tk.END)
+        q = search_var.get().strip()
+        if not q:
+            match_label.config(text=""); return
+        count, start = 0, "1.0"
+        while True:
+            pos = txt.search(q, start, nocase=True, stopindex=tk.END)
+            if not pos: break
+            end = f"{pos}+{len(q)}c"
+            txt.tag_add("found", pos, end)
+            if count == 0: txt.see(pos)
+            count += 1
+            start = end
+        match_label.config(text=f"{count} match{'es' if count != 1 else ''}")
+    search_var.trace_add("write", do_search)
+    search_entry.bind("<Return>", do_search)
+
+    bf = tk.Frame(pw, bg=config.DARK_BG); bf.pack(fill=tk.X, padx=15, pady=(4, 10))
+    tk.Button(bf, text="📋 Copy All", bg="#333", fg="white", relief=tk.FLAT, font=("Segoe UI", 9), padx=8, pady=4,
+              command=lambda: (pw.clipboard_clear(), pw.clipboard_append(open(srt_path, encoding='utf-8').read()))
+             ).pack(side=tk.LEFT, padx=(0, 5))
+    tk.Button(bf, text="📝 Open in Notepad", bg="#333", fg="white", relief=tk.FLAT, font=("Segoe UI", 9), padx=8, pady=4,
+              command=lambda: subprocess.Popen(["notepad", srt_path])).pack(side=tk.LEFT)
+    tk.Button(bf, text="Close", bg=config.VLC_ORANGE, fg="black", relief=tk.FLAT, font=("Segoe UI", 9, "bold"),
+              padx=12, pady=4, command=pw.destroy).pack(side=tk.RIGHT)
+
+def show_style_preview(app, style_vars):
+    pw = tk.Toplevel(app)
+    pw.title("🖥 Live Style Preview")
+    pw.geometry("660x420")
+    pw.configure(bg=config.DARK_BG)
+    pw.transient(app)
+    pw.resizable(False, False)
+
+    tk.Label(pw, text="Live Style Preview", bg=config.DARK_BG, fg=config.VLC_ORANGE,
+             font=("Segoe UI", 11, "bold")).pack(pady=(10, 4))
+    tk.Label(pw, text="Preview updates automatically as you change settings",
+             bg=config.DARK_BG, fg="#555", font=("Segoe UI", 8)).pack(pady=(0, 6))
+
+    CWIDTH, CHEIGHT = 620, 280
+    canvas = tk.Canvas(pw, width=CWIDTH, height=CHEIGHT, bg="#000",
+                       highlightthickness=2, highlightbackground="#333")
+    canvas.pack(padx=20)
+
+    def get_initial_text():
+        sp = clean_path(style_vars['srt_path'].get().strip())
+        if sp and os.path.exists(sp):
+            segs = parse_srt(sp)
+            if segs: return segs[0]['text'].replace('\n', ' ')[:60]
+        return "Sample subtitle text – preview here"
+
+    def draw():
+        canvas.delete("all")
+        canvas.create_rectangle(0, 0, CWIDTH, CHEIGHT, fill="#444444", outline="")
+        for x in range(0, CWIDTH, 20):
+            for y in range(0, CHEIGHT, 20):
+                if (x // 20 + y // 20) % 2 == 0:
+                    canvas.create_rectangle(x, y, x+20, y+20, fill="#3c3c3c", outline="")
+
+        canvas.create_rectangle(0, 0, CWIDTH, 25, fill="#111111", outline="")
+        canvas.create_rectangle(0, CHEIGHT-25, CWIDTH, CHEIGHT, fill="#111111", outline="")
+
+        font_name   = style_vars['font_name'].get() or "Arial"
+        font_size   = style_vars['font_size'].get()
+        weight      = " ".join(filter(None, ["bold" if style_vars['bold'].get() else "", "italic" if style_vars['italic'].get() else ""])) or "normal"
+        try:
+            fnt = (font_name, -font_size, weight)
+            tmp = canvas.create_text(CWIDTH//2, 10, text="A", fill="#000000", font=fnt)
+            canvas.delete(tmp)
+        except Exception:
+            fnt = ("Arial", -font_size, weight)
+
+        text_col    = style_vars['text_color'].get()
+        outline_col = style_vars['outline_color'].get()
+        outline_sz  = style_vars['outline_sz'].get()
+        shadow_sz   = style_vars['shadow'].get()
+        pos         = style_vars['position'].get()
+        display_txt = entry_widget.get().strip() or " "
+
+        cx, cy = CWIDTH // 2, 38 if pos == "top" else CHEIGHT - 38
+
+        if style_vars['bg'].get():
+            tmp = canvas.create_text(cx, cy, text=display_txt, font=fnt, anchor="center")
+            bbox = canvas.bbox(tmp)
+            canvas.delete(tmp)
+            if bbox:
+                x1, y1, x2, y2 = bbox
+                canvas.create_rectangle(x1 - 10, y1 - 2, x2 + 10, y2 + 2, fill="#111111", outline="")
+
+        if shadow_sz > 0:
+            for d in range(shadow_sz, 0, -1):
+                alpha = "#1a1a1a" if d == shadow_sz else "#0d0d0d"
+                canvas.create_text(cx + d*2, cy + d*2, text=display_txt, fill=alpha, font=fnt, anchor="center")
+
+        if outline_sz > 0:
+            for dx in range(-outline_sz, outline_sz + 1):
+                for dy in range(-outline_sz, outline_sz + 1):
+                    if abs(dx) + abs(dy) >= outline_sz:
+                        canvas.create_text(cx + dx, cy + dy, text=display_txt, fill=outline_col, font=fnt, anchor="center")
+
+        canvas.create_text(cx, cy, text=display_txt, fill=text_col, font=fnt, anchor="center")
+        indicator = "▲ Top" if pos == "top" else "▼ Bottom"
+        canvas.create_text(CWIDTH - 8, CHEIGHT - 8, text=indicator, fill="#333", font=("Segoe UI", 7), anchor="se")
+
+    ctrl = tk.Frame(pw, bg=config.DARK_BG); ctrl.pack(fill=tk.X, padx=20, pady=8)
+    tk.Label(ctrl, text="Preview text:", bg=config.DARK_BG, fg="#888", font=("Segoe UI", 9)).pack(side=tk.LEFT)
+    entry_widget = tk.Entry(ctrl, width=32, bg="#2a2a2a", fg="white", insertbackground="white", border=0, font=("Segoe UI", 9))
+    entry_widget.insert(0, get_initial_text())
+    entry_widget.pack(side=tk.LEFT, padx=6, ipady=2)
+    tk.Button(ctrl, text="Use 1st subtitle line", bg="#252525", fg="#aaa", relief=tk.FLAT, font=("Segoe UI", 8), padx=6, pady=3,
+              command=lambda: [entry_widget.delete(0, tk.END), entry_widget.insert(0, get_initial_text()), draw()]
+             ).pack(side=tk.LEFT, padx=4)
+
+    def live_update(*args):
+        if canvas.winfo_exists(): draw()
+
+    entry_widget.bind("<KeyRelease>", live_update)
+    pw.live_update_ref = live_update 
+    
+    traces = []
+    def add_trace(var):
+        cb = var.trace_add("write", live_update)
+        traces.append((var, cb))
+
+    for key, var in style_vars.items():
+        if key != 'srt_path': add_trace(var)
+
+    def on_close():
+        for key, var in style_vars.items():
+            if key != 'srt_path':
+                try: var.trace_remove("write", traces.pop(0)[1])
+                except: pass
+        pw.destroy()
+
+    pw.protocol("WM_DELETE_WINDOW", on_close)
+    draw()
+
+def open_history(app, populate_tabs_cb):
+    hw = tk.Toplevel(app)
+    hw.title("Subtitle History")
+    hw.geometry("540x400")
+    hw.configure(bg=config.DARK_BG)
+    hw.transient(app)
+
+    tk.Label(hw, text="Generated Subtitles History", bg=config.DARK_BG, fg=config.VLC_ORANGE,
+             font=("Segoe UI", 12, "bold")).pack(pady=10)
+
+    lf = tk.Frame(hw, bg=config.DARK_BG); lf.pack(fill=tk.BOTH, expand=True, padx=15, pady=5)
+    sb = tk.Scrollbar(lf); sb.pack(side=tk.RIGHT, fill=tk.Y)
+    lb = tk.Listbox(lf, bg=config.PANEL_BG, fg="white", yscrollcommand=sb.set, selectbackground=config.VLC_ORANGE,
+                    selectforeground="black", border=0, highlightthickness=1, highlightbackground="#333", font=("Segoe UI", 9))
+    lb.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+    sb.config(command=lb.yview)
+
+    def refresh():
+        lb.delete(0, tk.END)
+        if os.path.exists(config.SUB_DIR):
+            files = sorted([f for f in os.listdir(config.SUB_DIR) if f.lower().endswith(('.srt', '.ass'))],
+                           key=lambda x: os.path.getmtime(os.path.join(config.SUB_DIR, x)), reverse=True)
+            for f in files: lb.insert(tk.END, f)
+    refresh()
+
+    def load_sel():
+        sel = lb.curselection()
+        if not sel: return
+        populate_tabs_cb(os.path.join(config.SUB_DIR, lb.get(sel[0])))
+        messagebox.showinfo("Loaded", "Subtitle loaded into all tabs!", parent=hw)
+
+    def del_sel():
+        sel = lb.curselection()
+        if not sel: return
+        fn = lb.get(sel[0])
+        if messagebox.askyesno("Confirm", f"Delete '{fn}'?", parent=hw):
+            os.remove(os.path.join(config.SUB_DIR, fn)); refresh()
+
+    def export_sel():
+        sel = lb.curselection()
+        if not sel: return
+        fn  = lb.get(sel[0])
+        ext = os.path.splitext(fn)[1]
+        dst = filedialog.asksaveasfilename(defaultextension=ext, initialfile=fn, title="Save As…", filetypes=[("Subtitle", f"*{ext}")], parent=hw)
+        if dst:
+            shutil.copy(os.path.join(config.SUB_DIR, fn), dst)
+            messagebox.showinfo("Success", "Exported successfully!", parent=hw)
+
+    bf = tk.Frame(hw, bg=config.DARK_BG); bf.pack(fill=tk.X, pady=10, padx=15)
+    for txt, cmd, col in [
+        ("📂 Load into Tabs", load_sel,  "#2196F3"),
+        ("💾 Save As…",       export_sel, "#4CAF50"),
+        ("🗑️ Delete",          del_sel,   "#cc0000"),
+        ("📁 Open Folder",    lambda: os.startfile(config.SUB_DIR), "#444"),
+    ]:
+        tk.Button(bf, text=txt, bg=col, fg="white", font=("Segoe UI", 9, "bold"), relief=tk.FLAT, command=cmd, padx=6, pady=5).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=3)
+
+============================================================
+FILE: .\UniversalSubtitles.spec
+============================================================
+
+# -*- mode: python ; coding: utf-8 -*-
+
+
+a = Analysis(
+    ['main.py'],
+    pathex=[],
+    binaries=[('ffmpeg.exe', 'bin')],
+    datas=[('logo.ico', '.'), ('universal_subtitles.lua', '.')],
+    hiddenimports=[],
+    hookspath=[],
+    hooksconfig={},
+    runtime_hooks=[],
+    excludes=[],
+    noarchive=False,
+    optimize=0,
+)
+pyz = PYZ(a.pure)
+
+exe = EXE(
+    pyz,
+    a.scripts,
+    [],
+    exclude_binaries=True,
+    name='UniversalSubtitles',
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=True,
+    console=False,
+    disable_windowed_traceback=False,
+    argv_emulation=False,
+    target_arch=None,
+    codesign_identity=None,
+    entitlements_file=None,
+    icon=['logo.ico'],
+)
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.datas,
+    strip=False,
+    upx=True,
+    upx_exclude=[],
+    name='UniversalSubtitles',
+)
+
+============================================================
+FILE: .\utils.py
+============================================================
+
+import math
+import os
+import sys
+import re
+import config
+
+def format_timestamp(seconds):
+    seconds = max(0, seconds)
+    h  = math.floor(seconds / 3600)
+    m  = math.floor((seconds % 3600) / 60)
+    s  = math.floor(seconds % 60)
+    ms = math.floor((seconds - math.floor(seconds)) * 1000)
+    return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
+
+def format_ass_timestamp(seconds):
+    seconds = max(0, seconds)
+    h  = int(seconds // 3600)
+    m  = int((seconds % 3600) // 60)
+    s  = int(seconds % 60)
+    cs = int(round((seconds - int(seconds)) * 100))
+    if cs >= 100: cs = 99
+    return f"{h}:{m:02d}:{s:02d}.{cs:02d}"
+
+def time_to_sec(t_str):
+    t_str = t_str.replace('.', ',')
+    if ',' not in t_str: t_str += ',000'
+    h, m, s_ms = t_str.split(':')
+    s, ms = s_ms.split(',')
+    return int(h)*3600 + int(m)*60 + int(s) + int(ms)/1000.0
+
+def clean_path(path):
+    if not path: return ""
+    return os.path.normpath(path.replace("\\\\", "\\").replace("//", "/"))
+
+def detect_paired_file(filepath, file_type):
+    if not filepath: return ""
+    base = os.path.splitext(filepath)[0]
+    if file_type == "video":
+        for ext in ['.mp4', '.mkv', '.avi', '.ts', '.mov', '.wmv']:
+            if os.path.exists(base + ext): return base + ext
+    elif file_type == "srt":
+        if os.path.exists(base + ".srt"): return base + ".srt"
+    return ""
+
+def get_available_subtitles(video_path):
+    subs = []
+    if video_path and os.path.exists(video_path):
+        v_dir = os.path.dirname(video_path)
+        if os.path.exists(v_dir):
+            for f in os.listdir(v_dir):
+                if f.lower().endswith(('.srt', '.ass')):
+                    subs.append(os.path.normpath(os.path.join(v_dir, f)))
+    if os.path.exists(config.SUB_DIR):
+        for f in os.listdir(config.SUB_DIR):
+            if f.lower().endswith(('.srt', '.ass')):
+                subs.append(os.path.normpath(os.path.join(config.SUB_DIR, f)))
+    return list(dict.fromkeys(subs))
+
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
+def parse_srt(filepath):
+    with open(filepath, 'r', encoding='utf-8-sig') as f:
+        content = f.read()
+    blocks  = re.split(r'\n\s*\n', content.strip())
+    parsed  = []
+    for block in blocks:
+        lines = block.split('\n')
+        if len(lines) >= 3:
+            times = lines[1].split(' --> ')
+            if len(times) == 2:
+                try:
+                    parsed.append({
+                        "index": lines[0].strip(),
+                        "start": time_to_sec(times[0].strip()),
+                        "end":   time_to_sec(times[1].strip()),
+                        "text":  '\n'.join(lines[2:]).strip()
+                    })
+                except Exception:
+                    pass
+    return parsed
+
+def hex_to_ass_color(hex_color, alpha=0):
+    hx = hex_color.lstrip('#')
+    if len(hx) == 3: hx = ''.join(c*2 for c in hx)
+    r, g, b = int(hx[0:2], 16), int(hx[2:4], 16), int(hx[4:6], 16)
+    return f"&H{alpha:02X}{b:02X}{g:02X}{r:02X}"
+
+def generate_ass_content(segments, style):
+    primary   = hex_to_ass_color(style['primary_color'])
+    outline_c = hex_to_ass_color(style['outline_color'])
+    bg_alpha  = 0x60 if style['background'] else 0xFF
+    back      = hex_to_ass_color("#000000", alpha=bg_alpha)
+    bold      = -1 if style['bold']   else 0
+    italic    = -1 if style['italic'] else 0
+
+    header = (
+        "[Script Info]\n"
+        "; Generated by Universal Subtitle Toolkit (VLC Edition)\n"
+        "ScriptType: v4.00+\n"
+        "WrapStyle: 0\n"
+        "ScaledBorderAndShadow: yes\n"
+        "PlayResX: 512\n"
+        "PlayResY: 288\n\n"
+        "[V4+ Styles]\n"
+        "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, "
+        "OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, "
+        "ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, "
+        "Alignment, MarginL, MarginR, MarginV, Encoding\n"
+        f"Style: Default,{style['font_name']},{style['font_size']},"
+        f"{primary},&H000000FF,{outline_c},{back},"
+        f"{bold},{italic},0,0,100,100,0,0,1,"
+        f"{style['outline']},{style['shadow']},{style['alignment']},10,10,10,1\n\n"
+        "[Events]\n"
+        "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n"
+    )
+
+    events = ""
+    for seg in segments:
+        text = seg['text'].replace('\n', '\\N').strip()
+        if text:
+            events += (
+                f"Dialogue: 0,"
+                f"{format_ass_timestamp(seg['start'])},"
+                f"{format_ass_timestamp(seg['end'])},"
+                f"Default,,0,0,0,,{text}\n"
+            )
+    return header + events
+
+============================================================
+FILE: .\vlc_integration.py
+============================================================
+
+import os
+import subprocess
+import shutil
+import tkinter.filedialog as filedialog
+import tkinter.messagebox as messagebox
+from utils import clean_path, resource_path
+
+def get_vlc_path():
+    paths = [
+        os.path.join(os.environ.get('PROGRAMW6432', 'C:\\Program Files'), 'VideoLAN', 'VLC', 'vlc.exe'),
+        os.path.join(os.environ.get('PROGRAMFILES(X86)', 'C:\\Program Files (x86)'), 'VideoLAN', 'VLC', 'vlc.exe'),
+        os.path.join(os.environ.get('PROGRAMFILES', 'C:\\Program Files'), 'VideoLAN', 'VLC', 'vlc.exe')
+    ]
+    for p in paths:
+        if os.path.exists(p): return p
+    return None
+
+def launch_vlc_preview(video_path, srt_path):
+    if not video_path or not os.path.exists(video_path):
+        return messagebox.showerror("VLC Preview", "No valid video file selected.\nPlease select a video in Tab 1 first!")
+    if not srt_path or not os.path.exists(srt_path):
+        return messagebox.showerror("VLC Preview", "No valid subtitle file selected.")
+        
+    vlc = get_vlc_path()
+    if not vlc:
+        return messagebox.showerror("VLC Not Found", "Could not locate vlc.exe.\nPlease ensure VLC is installed in the default directory.")
+        
+    try:
+        subprocess.Popen([vlc, video_path, f"--sub-file={srt_path}"])
+    except Exception as e:
+        messagebox.showerror("Error", f"Could not launch VLC:\n{e}")
+
+def apply_subtitle_to_vlc(app, subtitle_path, success_message):
+    try:
+        if os.name == 'nt':
+            subprocess.Popen(f'explorer /select,"{clean_path(subtitle_path)}"')
+    except Exception:
+        pass
+    app.after(0, lambda: messagebox.showinfo(
+        "✅ Success",
+        f"{success_message}\n\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        "📌 TO APPLY IN VLC:\n"
+        "The file is highlighted in Explorer.\n"
+        "DRAG & DROP it into your VLC window!"
+    ))
+
+def install_vlc_extension(app):
+    # 1. Locate the .lua file bundled inside the PyInstaller executable
+    lua_source = resource_path("universal_subtitles.lua")
+    if not os.path.exists(lua_source):
+        return messagebox.showerror("Error", "Could not find universal_subtitles.lua inside the application files.")
+
+    # 2. Get the REAL AppData path (Bypassing the MSIX Sandbox)
+    # os.getenv('APPDATA') points to the sandbox. expanduser('~') points to the real C:\Users\Username
+    real_appdata = os.path.join(os.path.expanduser('~'), 'AppData', 'Roaming')
+    default_vlc_path = os.path.join(real_appdata, 'vlc', 'lua', 'extensions')
+
+    # 3. Pre-create the VLC folders so the user doesn't have to
+    try:
+        os.makedirs(default_vlc_path, exist_ok=True)
+    except Exception:
+        pass
+
+    # 4. Explain what is happening to the user
+    msg = (
+        "To use the extension in VLC, we need to copy it to VLC's plugin folder.\n\n"
+        "In the next window, the correct folder should already be selected. "
+        "Just click 'Select Folder' to allow the installation."
+    )
+    messagebox.showinfo("Install VLC Extension", msg, parent=app)
+
+    # 5. Open Directory Picker (Because the user manually clicks "Select", Windows allows it to bypass the sandbox)
+    target_dir = filedialog.askdirectory(
+        initialdir=default_vlc_path if os.path.exists(default_vlc_path) else real_appdata,
+        title="Select VLC Extensions Folder",
+        parent=app
+    )
+
+    if not target_dir:
+        return # User clicked Cancel
+
+    # 6. Copy the file
+    try:
+        destination_file = os.path.join(target_dir, "universal_subtitles.lua")
+        shutil.copy2(lua_source, destination_file)
+        messagebox.showinfo(
+            "✅ Installation Complete", 
+            f"Extension successfully installed to:\n{destination_file}\n\n"
+            "Please completely close and restart VLC Player to see it under the 'View' menu.", 
+            parent=app
+        )
+    except Exception as e:
+        messagebox.showerror("Installation Failed", f"Could not copy file:\n{str(e)}", parent=app)
+
+============================================================
+FILE: .\website\index.html
+============================================================
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Subtitle AI — AI-Powered Subtitles for VLC</title>
+    <meta name="description" content="Universal Subtitle AI generates accurate subtitles locally using AI. Transcribe, translate, and understand — seamlessly integrated with VLC Media Player.">
+    <link rel="icon" href="assets/ChatGPT Image Jun 18, 2026, 01_32_31 PM (1).png" type="image/png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <!-- Animated Background -->
+    <div class="bg-effects" aria-hidden="true">
+        <div class="bg-grid"></div>
+        <div class="bg-glow glow-1"></div>
+        <div class="bg-glow glow-2"></div>
+        <div class="bg-glow glow-3"></div>
+        <div class="bg-particles" id="particles"></div>
+    </div>
+
+    <!-- Header -->
+    <header id="site-header">
+        <div class="header-inner">
+            <a href="#" class="logo-link">
+                <img src="assets/ChatGPT Image Jun 18, 2026, 01_32_31 PM (1).png" alt="Logo" class="logo-icon">
+                <span class="logo-text">Universal Subtitle <span class="accent">AI</span></span>
+            </a>
+            <nav id="main-nav">
+                <a href="#features">Features</a>
+                <a href="#showcase">Showcase</a>
+                <a href="#how-it-works">How It Works</a>
+                <a href="downloads/UniversalSubtitles_Setup.exe" class="nav-download-btn" download>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Download
+                </a>
+            </nav>
+            <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Toggle menu">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </header>
+
+    <main>
+
+        <!-- Hero Section -->
+        <section class="hero" id="hero">
+            <div class="hero-left">
+                <div class="hero-badge fade-up">
+                    <span class="pulse-dot"></span>
+                    Version 1.0 — Free Download
+                </div>
+                <h1 class="hero-title fade-up delay-1">
+                    AI-Powered Subtitles<br>
+                    <span class="gradient-text">for VLC</span>
+                </h1>
+                <p class="hero-desc fade-up delay-2">
+                    Transcribe. Translate. Understand.<br>
+                    Generate highly accurate subtitles locally with AI — your files never leave your computer.
+                </p>
+                <div class="hero-actions fade-up delay-3">
+                    <a href="downloads/UniversalSubtitles_Setup.exe" class="btn btn-primary" id="hero-download-btn" download>
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Download for Windows <span style="opacity: 0.75; font-size: 0.9em; font-weight: normal; margin-left: 4px;">(32.3 MB)</span>
+                    </a>
+                    <a href="#features" class="btn btn-ghost">
+                        Learn More
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                    </a>
+                </div>
+                <div class="hero-meta fade-up delay-4">
+                    <div class="meta-item">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/></svg>
+                        Windows 10 & 11
+                    </div>
+                    <div class="meta-item">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        100% Offline & Private
+                    </div>
+                    <div class="meta-item">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        One-Click Setup
+                    </div>
+                </div>
+            </div>
+            <div class="hero-right fade-up delay-2">
+                <div class="hero-showcase-frame">
+                    <div class="frame-glow"></div>
+                    <img src="assets/b3071856-7221-4be0-b674-2296f8156a85.png" alt="Universal Subtitle AI — Promotional Banner" class="hero-showcase-img">
+                </div>
+            </div>
+        </section>
+
+        <!-- App Preview Section -->
+        <section class="app-preview-section" id="app-preview">
+            <div class="section-container">
+                <div class="app-preview-frame fade-up">
+                    <div class="preview-window-bar">
+                        <div class="win-dot red"></div>
+                        <div class="win-dot yellow"></div>
+                        <div class="win-dot green"></div>
+                        <span class="win-title">Universal Subtitles Toolkit (VLC Edition)</span>
+                    </div>
+                    <img src="assets/Screenshot 2026-06-19 170100.png" alt="Universal Subtitle AI Application Window" class="app-preview-img">
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section class="features-section" id="features">
+            <div class="section-container">
+                <div class="section-label fade-up">CAPABILITIES</div>
+                <h2 class="section-title fade-up delay-1">Everything You Need</h2>
+                <p class="section-desc fade-up delay-2">Powerful AI subtitle generation built directly into your VLC workflow.</p>
+
+                <div class="features-grid">
+                    <div class="feature-card fade-up">
+                        <div class="feature-icon-wrap">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                        </div>
+                        <h3>Automatic Transcription</h3>
+                        <p>Powered by advanced speech-to-text AI. Handles accents, background noise, and multiple speakers effortlessly.</p>
+                    </div>
+                    <div class="feature-card fade-up delay-1">
+                        <div class="feature-icon-wrap">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                        </div>
+                        <h3>Multi-Language Translation</h3>
+                        <p>Translate subtitles into dozens of languages instantly. Supports Manglish, Hinglish, and custom transliterations.</p>
+                    </div>
+                    <div class="feature-card fade-up delay-2">
+                        <div class="feature-icon-wrap">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                        </div>
+                        <h3>AI-Powered Accuracy</h3>
+                        <p>Choose from multiple AI providers including Groq for lightning-fast processing with exceptional accuracy.</p>
+                    </div>
+                    <div class="feature-card fade-up delay-3">
+                        <div class="feature-icon-wrap">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                        </div>
+                        <h3>SRT Export</h3>
+                        <p>Export subtitles in standard SRT format. Compatible with every major video player and editing tool.</p>
+                    </div>
+                    <div class="feature-card fade-up delay-4">
+                        <div class="feature-icon-wrap">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        </div>
+                        <h3>Total Privacy</h3>
+                        <p>All processing happens locally on your machine. Your audio and video files never leave your computer.</p>
+                    </div>
+                    <div class="feature-card fade-up delay-5">
+                        <div class="feature-icon-wrap">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                        </div>
+                        <h3>VLC Integration</h3>
+                        <p>Seamlessly integrates with VLC Media Player. Generate and sync subtitles directly from the toolkit.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Showcase / Gallery Section -->
+        <section class="showcase-section" id="showcase">
+            <div class="section-container" style="text-align: center;">
+                <div class="section-label fade-up">BRAND</div>
+                <h2 class="section-title fade-up delay-1">Universal Subtitle AI</h2>
+                <div class="showcase-grid" style="display: flex; justify-content: center; margin-top: 3rem;">
+                    <div class="showcase-card fade-up delay-2" style="max-width: 400px; width: 100%;">
+                        <img src="assets/c2aa87cb-994f-4543-8501-2c22268d8a73.png" alt="Universal Subtitle AI — Logo">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- How It Works -->
+        <section class="how-section" id="how-it-works">
+            <div class="section-container">
+                <div class="section-label fade-up">GETTING STARTED</div>
+                <h2 class="section-title fade-up delay-1">Up and Running in Minutes</h2>
+                <p class="section-desc fade-up delay-2">Three simple steps to start generating subtitles automatically.</p>
+
+                <div class="steps-grid">
+                    <div class="step-card fade-up">
+                        <div class="step-number">01</div>
+                        <h3>Download & Install</h3>
+                        <p>Download the setup file and run the installer. It takes less than a minute.</p>
+                    </div>
+                    <div class="step-connector fade-up delay-1">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                    </div>
+                    <div class="step-card fade-up delay-1">
+                        <div class="step-number">02</div>
+                        <h3>Select Your Video</h3>
+                        <p>Browse for any video file. Choose your AI provider and target language.</p>
+                    </div>
+                    <div class="step-connector fade-up delay-2">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                    </div>
+                    <div class="step-card fade-up delay-2">
+                        <div class="step-number">03</div>
+                        <h3>Generate & Enjoy</h3>
+                        <p>Hit Generate and let AI do the work. Your SRT file is ready in seconds.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Final CTA -->
+        <section class="cta-section" id="download">
+            <div class="section-container">
+                <div class="cta-card fade-up">
+                    <div class="cta-bg-art" aria-hidden="true">
+                        <div class="cta-ring ring-1"></div>
+                        <div class="cta-ring ring-2"></div>
+                    </div>
+                    <div class="cta-content">
+                        <h2 class="fade-up delay-1">Ready to Transform Your Subtitling?</h2>
+                        <p class="fade-up delay-2">Download Universal Subtitle AI now — completely free.</p>
+                        <a href="downloads/UniversalSubtitles_Setup.exe" class="btn btn-primary btn-lg fade-up delay-3" download>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Download for Windows <span style="opacity: 0.75; font-size: 0.9em; font-weight: normal; margin-left: 4px;">(32.3 MB)</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer id="site-footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <img src="assets/ChatGPT Image Jun 18, 2026, 01_32_31 PM (1).png" alt="Logo" class="footer-logo-icon">
+                <span>Universal Subtitle <span class="accent">AI</span></span>
+            </div>
+            <p class="footer-copy">&copy; 2026 Universal Subtitle AI. All rights reserved.</p>
+            <div class="footer-tagline">Watch in any language. <span class="accent">Anytime. Anywhere.</span></div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
+
+============================================================
+FILE: .\website\script.js
+============================================================
+
+document.addEventListener('DOMContentLoaded', () => {
+
+    // ── Scroll Animations (Intersection Observer) ──
+    const observerOptions = {
+        root: null,
+        rootMargin: '0px 0px -60px 0px',
+        threshold: 0.1
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                observer.unobserve(entry.target);
+            }
+        });
+    }, observerOptions);
+
+    document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+
+    // ── Header Scroll Effect ──
+    const header = document.getElementById('site-header');
+    let lastScroll = 0;
+
+    window.addEventListener('scroll', () => {
+        const currentScroll = window.scrollY;
+        if (currentScroll > 40) {
+            header.classList.add('scrolled');
+        } else {
+            header.classList.remove('scrolled');
+        }
+        lastScroll = currentScroll;
+    }, { passive: true });
+
+    // ── Floating Particles ──
+    const particlesContainer = document.getElementById('particles');
+    if (particlesContainer) {
+        const particleCount = 25;
+        for (let i = 0; i < particleCount; i++) {
+            const particle = document.createElement('div');
+            particle.classList.add('particle');
+            particle.style.left = Math.random() * 100 + '%';
+            particle.style.top = (Math.random() * 100 + 100) + '%';
+            particle.style.animationDuration = (8 + Math.random() * 15) + 's';
+            particle.style.animationDelay = (Math.random() * 10) + 's';
+            particle.style.width = (1 + Math.random() * 2) + 'px';
+            particle.style.height = particle.style.width;
+            particlesContainer.appendChild(particle);
+        }
+    }
+
+    // ── Mobile Menu Toggle ──
+    const mobileBtn = document.getElementById('mobile-menu-btn');
+    const mainNav = document.getElementById('main-nav');
+
+    if (mobileBtn && mainNav) {
+        mobileBtn.addEventListener('click', () => {
+            mainNav.classList.toggle('mobile-open');
+            mobileBtn.classList.toggle('active');
+        });
+    }
+
+    // ── Smooth Scroll for Anchor Links ──
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', (e) => {
+            const targetId = anchor.getAttribute('href');
+            if (targetId === '#') return;
+            const target = document.querySelector(targetId);
+            if (target) {
+                e.preventDefault();
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // Close mobile nav if open
+                if (mainNav) mainNav.classList.remove('mobile-open');
+                if (mobileBtn) mobileBtn.classList.remove('active');
+            }
+        });
+    });
+
+    // ── Subtle Parallax on Hero Showcase ──
+    const heroFrame = document.querySelector('.hero-showcase-frame');
+    if (heroFrame && window.innerWidth > 960) {
+        window.addEventListener('mousemove', (e) => {
+            const x = (e.clientX / window.innerWidth - 0.5) * 8;
+            const y = (e.clientY / window.innerHeight - 0.5) * 8;
+            heroFrame.style.transform = `perspective(1000px) rotateY(${x}deg) rotateX(${-y}deg)`;
+        }, { passive: true });
+    }
+
+});
+
+
+============================================================
+FILE: .\website\styles.css
+============================================================
+
+/* ============================================================
+   Universal Subtitle AI — Website Styles
+   Color Palette: VLC Orange (#FF8C00) + Deep Black
+   ============================================================ */
+
+/* --- CSS Variables --- */
+:root {
+    /* Brand Colors */
+    --orange-50: #fff7ed;
+    --orange-100: #ffedd5;
+    --orange-200: #fed7aa;
+    --orange-300: #fdba74;
+    --orange-400: #fb923c;
+    --orange-500: #f97316;
+    --orange-600: #ea580c;
+    --orange-700: #c2410c;
+
+    --brand: #FF8C00;
+    --brand-light: #FFa733;
+    --brand-dark: #e07800;
+    --brand-glow: rgba(255, 140, 0, 0.35);
+    --brand-glow-soft: rgba(255, 140, 0, 0.12);
+
+    /* Neutrals */
+    --black: #060608;
+    --bg-primary: #0a0a0d;
+    --bg-secondary: #111116;
+    --bg-card: #15151a;
+    --bg-card-hover: #1c1c22;
+    --border: rgba(255, 255, 255, 0.06);
+    --border-hover: rgba(255, 140, 0, 0.25);
+
+    --text-primary: #f5f5f7;
+    --text-secondary: #9c9ca4;
+    --text-tertiary: #6b6b73;
+
+    /* Glass */
+    --glass-bg: rgba(12, 12, 16, 0.75);
+    --glass-border: rgba(255, 255, 255, 0.08);
+
+    /* Sizing */
+    --max-width: 1200px;
+    --header-height: 72px;
+
+    /* Easing */
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* --- Reset & Base --- */
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.6;
+    overflow-x: hidden;
+}
+
+img {
+    max-width: 100%;
+    display: block;
+}
+
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
+/* --- Animated Background --- */
+.bg-effects {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.bg-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse 60% 50% at 50% 0%, black 20%, transparent 70%);
+}
+
+.bg-glow {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(100px);
+    opacity: 0.4;
+}
+
+.glow-1 {
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, var(--brand), transparent 70%);
+    top: -200px;
+    left: 50%;
+    transform: translateX(-50%);
+    animation: pulse-glow 8s ease-in-out infinite alternate;
+}
+
+.glow-2 {
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(255, 140, 0, 0.6), transparent 70%);
+    bottom: 20%;
+    right: -100px;
+    animation: float-glow 12s ease-in-out infinite alternate;
+    opacity: 0.2;
+}
+
+.glow-3 {
+    width: 350px;
+    height: 350px;
+    background: radial-gradient(circle, rgba(255, 100, 0, 0.5), transparent 70%);
+    top: 60%;
+    left: -100px;
+    animation: float-glow 15s ease-in-out infinite alternate-reverse;
+    opacity: 0.15;
+}
+
+@keyframes pulse-glow {
+    0% { transform: translateX(-50%) scale(1); opacity: 0.35; }
+    100% { transform: translateX(-50%) scale(1.15); opacity: 0.5; }
+}
+
+@keyframes float-glow {
+    0% { transform: translate(0, 0); }
+    100% { transform: translate(40px, -40px); }
+}
+
+/* Floating particles */
+.bg-particles {
+    position: absolute;
+    inset: 0;
+}
+
+.particle {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    background: var(--brand);
+    border-radius: 50%;
+    opacity: 0;
+    animation: particle-float linear infinite;
+}
+
+@keyframes particle-float {
+    0% { opacity: 0; transform: translateY(0); }
+    10% { opacity: 0.6; }
+    90% { opacity: 0.6; }
+    100% { opacity: 0; transform: translateY(-100vh); }
+}
+
+/* --- Header --- */
+#site-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--header-height);
+    z-index: 1000;
+    transition: background 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+}
+
+#site-header.scrolled {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--glass-border);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+}
+
+.header-inner {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 0 2rem;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.logo-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.logo-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+}
+
+.logo-text {
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.accent {
+    color: var(--brand);
+}
+
+#main-nav {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+}
+
+#main-nav a:not(.nav-download-btn) {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    transition: color 0.25s ease;
+    position: relative;
+}
+
+#main-nav a:not(.nav-download-btn):hover {
+    color: var(--text-primary);
+}
+
+#main-nav a:not(.nav-download-btn)::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: var(--brand);
+    border-radius: 2px;
+    transition: width 0.3s var(--ease-out);
+}
+
+#main-nav a:not(.nav-download-btn):hover::after {
+    width: 100%;
+}
+
+.nav-download-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 1.25rem;
+    background: var(--brand);
+    color: #000;
+    font-weight: 600;
+    font-size: 0.88rem;
+    border-radius: 10px;
+    transition: all 0.3s var(--ease-out);
+}
+
+.nav-download-btn:hover {
+    background: var(--brand-light);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px var(--brand-glow);
+}
+
+/* Mobile Menu Button */
+.mobile-menu-btn {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+}
+
+.mobile-menu-btn span {
+    display: block;
+    width: 24px;
+    height: 2px;
+    background: var(--text-primary);
+    border-radius: 2px;
+    transition: all 0.3s ease;
+}
+
+/* --- Buttons --- */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-weight: 600;
+    font-size: 1rem;
+    border-radius: 14px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.35s var(--ease-out);
+    text-decoration: none;
+}
+
+.btn-primary {
+    padding: 0.9rem 2rem;
+    background: var(--brand);
+    color: #000;
+    box-shadow: 0 4px 25px var(--brand-glow), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.btn-primary:hover {
+    background: var(--brand-light);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 35px var(--brand-glow), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+.btn-ghost {
+    padding: 0.9rem 2rem;
+    background: transparent;
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+}
+
+.btn-ghost:hover {
+    border-color: var(--border-hover);
+    background: var(--brand-glow-soft);
+    transform: translateY(-2px);
+}
+
+.btn-lg {
+    padding: 1.1rem 2.5rem;
+    font-size: 1.1rem;
+    border-radius: 16px;
+}
+
+/* --- Layout --- */
+main {
+    position: relative;
+    z-index: 1;
+}
+
+.section-container {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 0 2rem;
+}
+
+.section-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: var(--brand);
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.section-title {
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.section-desc {
+    font-size: 1.15rem;
+    color: var(--text-secondary);
+    text-align: center;
+    max-width: 550px;
+    margin: 0 auto 4rem auto;
+}
+
+/* ============================================================
+   HERO
+   ============================================================ */
+.hero {
+    min-height: 100vh;
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: calc(var(--header-height) + 4rem) 2rem 4rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    align-items: center;
+}
+
+.hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.45rem 1rem;
+    background: rgba(255, 140, 0, 0.08);
+    border: 1px solid rgba(255, 140, 0, 0.2);
+    border-radius: 50px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--brand);
+    margin-bottom: 2rem;
+}
+
+.pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--brand);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 var(--brand-glow); }
+    50% { opacity: 0.7; box-shadow: 0 0 0 8px transparent; }
+}
+
+.hero-title {
+    font-size: clamp(2.8rem, 5vw, 4.2rem);
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    line-height: 1.08;
+    margin-bottom: 1.5rem;
+}
+
+.gradient-text {
+    background: linear-gradient(135deg, var(--brand) 0%, #FFD700 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.hero-desc {
+    font-size: 1.15rem;
+    color: var(--text-secondary);
+    line-height: 1.7;
+    margin-bottom: 2.5rem;
+    max-width: 480px;
+}
+
+.hero-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 3rem;
+}
+
+.hero-meta {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--text-tertiary);
+}
+
+.meta-item svg {
+    color: var(--brand);
+    flex-shrink: 0;
+}
+
+/* Hero Showcase */
+.hero-right {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.hero-showcase-frame {
+    position: relative;
+    border-radius: 24px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    box-shadow:
+        0 0 0 1px rgba(255, 140, 0, 0.05),
+        0 20px 60px rgba(0, 0, 0, 0.5),
+        0 0 80px var(--brand-glow-soft);
+    transition: all 0.5s var(--ease-out);
+}
+
+.hero-showcase-frame:hover {
+    transform: translateY(-8px) scale(1.01);
+    box-shadow:
+        0 0 0 1px rgba(255, 140, 0, 0.15),
+        0 30px 80px rgba(0, 0, 0, 0.5),
+        0 0 120px var(--brand-glow-soft);
+}
+
+.frame-glow {
+    position: absolute;
+    inset: -2px;
+    border-radius: 26px;
+    background: linear-gradient(135deg, var(--brand-glow), transparent 50%);
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+
+.hero-showcase-frame:hover .frame-glow {
+    opacity: 1;
+}
+
+.hero-showcase-img {
+    border-radius: 23px;
+}
+
+/* ============================================================
+   APP PREVIEW
+   ============================================================ */
+.app-preview-section {
+    padding: 2rem 0 8rem;
+}
+
+.app-preview-frame {
+    max-width: 700px;
+    margin: 0 auto;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+
+.preview-window-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: #1a1a1f;
+    border-bottom: 1px solid var(--border);
+}
+
+.win-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.win-dot.red { background: #ff5f57; }
+.win-dot.yellow { background: #febc2e; }
+.win-dot.green { background: #28c840; }
+
+.win-title {
+    margin-left: 8px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--text-tertiary);
+}
+
+.app-preview-img {
+    width: 100%;
+}
+
+/* ============================================================
+   FEATURES
+   ============================================================ */
+.features-section {
+    padding: 6rem 0;
+}
+
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+}
+
+.feature-card {
+    padding: 2.2rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    transition: all 0.4s var(--ease-out);
+    position: relative;
+    overflow: hidden;
+}
+
+.feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--brand), transparent);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+
+.feature-card:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--border-hover);
+    transform: translateY(-6px);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3), 0 0 40px var(--brand-glow-soft);
+}
+
+.feature-card:hover::before {
+    opacity: 1;
+}
+
+.feature-icon-wrap {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: rgba(255, 140, 0, 0.1);
+    border: 1px solid rgba(255, 140, 0, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+    color: var(--brand);
+    transition: all 0.35s var(--ease-out);
+}
+
+.feature-card:hover .feature-icon-wrap {
+    background: rgba(255, 140, 0, 0.15);
+    border-color: rgba(255, 140, 0, 0.3);
+    box-shadow: 0 0 25px var(--brand-glow-soft);
+    transform: scale(1.05);
+}
+
+.feature-card h3 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 0.6rem;
+    letter-spacing: -0.01em;
+}
+
+.feature-card p {
+    font-size: 0.92rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+/* ============================================================
+   SHOWCASE / GALLERY
+   ============================================================ */
+.showcase-section {
+    padding: 6rem 0;
+}
+
+.showcase-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+}
+
+.showcase-card {
+    border-radius: 20px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    transition: all 0.4s var(--ease-out);
+    cursor: pointer;
+}
+
+.showcase-card:hover {
+    border-color: var(--border-hover);
+    transform: translateY(-4px);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35), 0 0 40px var(--brand-glow-soft);
+}
+
+.showcase-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.6s var(--ease-out);
+}
+
+.showcase-card:hover img {
+    transform: scale(1.03);
+}
+
+.showcase-wide {
+    grid-column: span 2;
+}
+
+/* ============================================================
+   HOW IT WORKS
+   ============================================================ */
+.how-section {
+    padding: 6rem 0;
+}
+
+.steps-grid {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.step-card {
+    flex: 1;
+    max-width: 320px;
+    padding: 2.5rem 2rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    text-align: center;
+    transition: all 0.4s var(--ease-out);
+}
+
+.step-card:hover {
+    border-color: var(--border-hover);
+    background: var(--bg-card-hover);
+    transform: translateY(-6px);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3);
+}
+
+.step-number {
+    font-size: 3rem;
+    font-weight: 900;
+    color: var(--brand);
+    letter-spacing: -0.05em;
+    line-height: 1;
+    margin-bottom: 1.2rem;
+    opacity: 0.3;
+    transition: opacity 0.3s ease;
+}
+
+.step-card:hover .step-number {
+    opacity: 0.7;
+}
+
+.step-card h3 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 0.6rem;
+}
+
+.step-card p {
+    font-size: 0.92rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.step-connector {
+    color: var(--text-tertiary);
+    flex-shrink: 0;
+    opacity: 0.3;
+}
+
+/* ============================================================
+   CTA
+   ============================================================ */
+.cta-section {
+    padding: 6rem 0 8rem;
+}
+
+.cta-card {
+    position: relative;
+    border-radius: 28px;
+    padding: 5rem 3rem;
+    text-align: center;
+    background: linear-gradient(135deg, rgba(255, 140, 0, 0.06) 0%, var(--bg-card) 50%, rgba(255, 140, 0, 0.04) 100%);
+    border: 1px solid var(--border);
+    overflow: hidden;
+}
+
+.cta-bg-art {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.cta-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 140, 0, 0.08);
+}
+
+.ring-1 {
+    width: 600px;
+    height: 600px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    animation: ring-pulse 6s ease-in-out infinite;
+}
+
+.ring-2 {
+    width: 400px;
+    height: 400px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    animation: ring-pulse 6s ease-in-out 3s infinite;
+}
+
+@keyframes ring-pulse {
+    0%, 100% { opacity: 0.3; transform: translate(-50%, -50%) scale(1); }
+    50% { opacity: 0.6; transform: translate(-50%, -50%) scale(1.05); }
+}
+
+.cta-content {
+    position: relative;
+    z-index: 1;
+}
+
+.cta-content h2 {
+    font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin-bottom: 1rem;
+}
+
+.cta-content p {
+    font-size: 1.15rem;
+    color: var(--text-secondary);
+    margin-bottom: 2.5rem;
+}
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+#site-footer {
+    border-top: 1px solid var(--border);
+    padding: 3rem 2rem;
+    position: relative;
+    z-index: 1;
+}
+
+.footer-inner {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.footer-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.footer-logo-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+}
+
+.footer-copy {
+    font-size: 0.85rem;
+    color: var(--text-tertiary);
+}
+
+.footer-tagline {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+.fade-up {
+    opacity: 0;
+    transform: translateY(25px);
+    transition: opacity 0.7s var(--ease-out), transform 0.7s var(--ease-out);
+}
+
+.fade-up.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.delay-1 { transition-delay: 0.1s; }
+.delay-2 { transition-delay: 0.2s; }
+.delay-3 { transition-delay: 0.3s; }
+.delay-4 { transition-delay: 0.4s; }
+.delay-5 { transition-delay: 0.5s; }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 960px) {
+    .hero {
+        grid-template-columns: 1fr;
+        text-align: center;
+        min-height: auto;
+        padding-top: calc(var(--header-height) + 3rem);
+        padding-bottom: 3rem;
+        gap: 3rem;
+    }
+
+    .hero-desc {
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .hero-actions {
+        justify-content: center;
+    }
+
+    .hero-meta {
+        justify-content: center;
+    }
+
+    .features-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .steps-grid {
+        flex-direction: column;
+    }
+
+    .step-connector {
+        transform: rotate(90deg);
+    }
+
+    .showcase-wide {
+        grid-column: span 1;
+    }
+}
+
+@media (max-width: 640px) {
+    .hero-title {
+        font-size: 2.2rem;
+    }
+
+    #main-nav a:not(.nav-download-btn) {
+        display: none;
+    }
+
+    .mobile-menu-btn {
+        display: flex;
+    }
+
+    .features-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .showcase-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .showcase-wide {
+        grid-column: span 1;
+    }
+
+    .footer-inner {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .cta-card {
+        padding: 3rem 1.5rem;
+    }
+
+    .hero-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .hero-meta {
+        flex-direction: column;
+        align-items: center;
+    }
+}
+
+
