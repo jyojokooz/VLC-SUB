@@ -4,7 +4,9 @@ import requests
 import subprocess
 import os
 from deep_translator import GoogleTranslator
-from utils import parse_srt
+
+# --- FIX: Imported resource_path ---
+from utils import parse_srt, resource_path
 import config
 
 def split_text_for_translation(text, max_chars=3000):
@@ -66,8 +68,15 @@ def transcribe_audio_chunk(chunk_path, provider, api_key, source_lang=None):
             files={"file": (os.path.basename(chunk_path), f, "audio/mp4")},
             data=data, timeout=300
         )
+        
     if response.status_code != 200:
-        raise Exception(f"API Error {response.status_code}:\n{response.text[:400]}")
+        if response.status_code == 429:
+            raise Exception(f"{provider} API Error: You have exceeded your current quota. Please check your plan and billing details.")
+        elif response.status_code == 401:
+            raise Exception(f"{provider} API Error: Invalid API Key. Please verify your credentials.")
+        else:
+            raise Exception(f"API Error {response.status_code}:\n{response.text[:400]}")
+            
     return response.json()
 
 def detect_sync_offset(video_path, srt_path, status_callback=None):
@@ -80,8 +89,12 @@ def detect_sync_offset(video_path, srt_path, status_callback=None):
 
     try:
         cf  = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+        
+        # --- FIX: Use bundled ffmpeg path instead of system path ---
+        ffmpeg_path = resource_path(os.path.join("bin", "ffmpeg.exe"))
+        
         cmd = [
-            "ffmpeg", "-i", video_path, "-t", "300",
+            ffmpeg_path, "-i", video_path, "-t", "300",
             "-af", "silencedetect=noise=-35dB:d=0.3", "-f", "null", "-"
         ]
         result = subprocess.run(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE,

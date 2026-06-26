@@ -21,8 +21,10 @@ WizardStyle=modern
 ; This is very important for MSIX conversion later:
 UninstallDisplayIcon={app}\{#MyAppExeName}
 
-[Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+; ----------------------------------------------------------------------
+; REMOVED [Tasks] section completely.
+; We no longer ask for a Desktop icon to prevent Microsoft Store duplication.
+; ----------------------------------------------------------------------
 
 [Files]
 ; IMPORTANT: Make sure this points to your PyInstaller "dist\UniversalSubtitles" folder!
@@ -31,9 +33,12 @@ Source: "dist\UniversalSubtitles\*"; DestDir: "{app}"; Flags: ignoreversion recu
 ; Include the logo for the installer/app icon
 Source: "logo.ico"; DestDir: "{app}"; Flags: ignoreversion
 
+; ---> NEW LINE: Install the VLC Lua Extension automatically <---
+Source: "universal_subtitles.lua"; DestDir: "{userappdata}\vlc\lua\extensions"; Flags: ignoreversion
+
 [Icons]
+; Keep ONLY the Start Menu shortcut. 
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\logo.ico"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon; IconFilename: "{app}\logo.ico"
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
