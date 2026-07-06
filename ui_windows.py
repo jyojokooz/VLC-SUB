@@ -4,7 +4,7 @@ import tkinter.messagebox as messagebox
 import subprocess
 import os
 import shutil
-import config
+import ust_settings as config
 from utils import clean_path, parse_srt, format_timestamp
 
 def show_srt_preview(app, srt_path, title="👁 Subtitle Preview"):

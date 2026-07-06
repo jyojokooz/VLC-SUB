@@ -1,5 +1,5 @@
 #define MyAppName "Universal AI Subtitle Translator"
-#define MyAppVersion "4.0.0.0"
+#define MyAppVersion "4.0.2.0"
 #define MyAppPublisher "Joel S Raphael"
 #define MyAppExeName "UniversalSubtitles.exe"
 

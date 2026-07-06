@@ -9,6 +9,19 @@ VLC_ORANGE = "#ff8c00"
 DARK_BG = "#121212"
 PANEL_BG = "#1e1e1e"
 
+AUDIO_SEGMENT_TIME = 300  
+MAX_TRANSCRIPTION_WORKERS = 2
+TRANSLATION_BATCH_SIZE = 10
+
+OFFLINE_MODEL_SIZES = {
+    "Small (~460MB, Fastest)": "small",
+    "Medium (~1.5GB, Balanced)": "medium",
+    "Large-v3 (~3GB, Best Quality)": "large-v3"
+}
+# THIS IS THE LINE IT WAS LOOKING FOR:
+DEFAULT_OFFLINE_MODEL = "Medium (~1.5GB, Balanced)"
+CANCEL_DOWNLOAD = False
+
 # ============================================================
 # DIRECTORY SETUP
 # ============================================================

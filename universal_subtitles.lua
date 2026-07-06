@@ -6,7 +6,7 @@
 function descriptor()
     return {
         title = "Universal Subtitles AI",
-        version = "1.0",
+        version = "4.0.1.0",
         author = "Joel S Raphael",
         url = "http://universalsubtitles.ai",
         shortdesc = "Launch Universal Subtitles AI",
@@ -47,22 +47,23 @@ function click_open_app()
         end
     end
 
-    -- Look for the installed Toolkit executable
     local local_appdata = os.getenv("LOCALAPPDATA")
     local roaming_appdata = os.getenv("APPDATA")
     local program_files = os.getenv("PROGRAMFILES")
     local program_files_x86 = os.getenv("PROGRAMFILES(X86)")
 
-    -- Check all possible install locations Inno Setup might have used
-    local exe_paths = {
+    local exe_path = ""
+
+    -- 1. Check traditional installation paths (Inno Setup / Direct Installs)
+    -- Using io.open works normally for actual executable files.
+    local normal_paths = {
         local_appdata .. "\\Programs\\UniversalSubtitleToolkit\\UniversalSubtitles.exe",
         roaming_appdata .. "\\Programs\\UniversalSubtitleToolkit\\UniversalSubtitles.exe",
         program_files .. "\\UniversalSubtitleToolkit\\UniversalSubtitles.exe",
         program_files_x86 .. "\\UniversalSubtitleToolkit\\UniversalSubtitles.exe"
     }
 
-    local exe_path = ""
-    for _, path in ipairs(exe_paths) do
+    for _, path in ipairs(normal_paths) do
         local f = io.open(path, "r")
         if f then
             f:close()
@@ -71,7 +72,27 @@ function click_open_app()
         end
     end
 
-    -- Launch the app
+    -- 2. Check Microsoft Store / MSIX App Execution Alias
+    -- io.open fails on MSIX reparse points, so we use Windows CMD 'if exist' instead.
+    if exe_path == "" then
+        local msix_path = local_appdata .. "\\Microsoft\\WindowsApps\\UniversalSubtitles.exe"
+        local status = os.execute('if exist "' .. msix_path .. '" (exit 0) else (exit 1)')
+        
+        -- Support both Lua 5.1 (returns number 0) and Lua 5.2+ (returns boolean true)
+        if status == 0 or status == true then
+            exe_path = msix_path
+        end
+    end
+
+    -- 3. Final Fallback: Check System PATH
+    if exe_path == "" then
+        local status = os.execute('where UniversalSubtitles.exe >nul 2>nul')
+        if status == 0 or status == true then
+            exe_path = "UniversalSubtitles.exe"
+        end
+    end
+
+    -- 4. Launch the app
     if exe_path ~= "" then
         local cmd = ""
         if video_path ~= "" then

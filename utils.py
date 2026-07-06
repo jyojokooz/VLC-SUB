@@ -2,7 +2,7 @@ import math
 import os
 import sys
 import re
-import config
+import ust_settings as config
 
 def format_timestamp(seconds):
     seconds = max(0, seconds)
@@ -130,3 +130,22 @@ def generate_ass_content(segments, style):
                 f"Default,,0,0,0,,{text}\n"
             )
     return header + events
+
+def get_ffmpeg_path():
+    """Foolproof method to find ffmpeg.exe whether running as script or compiled .exe"""
+    import sys, os
+    
+    # 1. If running as compiled PyInstaller app (onedir mode)
+    if getattr(sys, 'frozen', False):
+        exe_dir = os.path.dirname(sys.executable)
+        path = os.path.join(exe_dir, "ffmpeg.exe")
+        if os.path.exists(path): 
+            return path
+            
+    # 2. Check local script directory (Development mode)
+    path = os.path.join(os.path.abspath("."), "ffmpeg.exe")
+    if os.path.exists(path): 
+        return path
+        
+    # 3. Fallback to system PATH
+    return "ffmpeg"
