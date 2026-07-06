@@ -2,28 +2,42 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
+*.egg
+*.egg-info/
+.eggs/
 
 # Application Specific
 temp_audio/
 subtitles/
 debug_log.txt
+file.txt
+Output/
 
-# Executables & Binaries (Do not push these to GitHub!)
+# Executables & Binaries
 ffmpeg.exe
 ffprobe.exe
+*.exe
+*.dll
 
 # Environments
 .venv/
 env/
 venv/
 ENV/
+.env
 
 # IDEs
 .vscode/
 .idea/
+*.swp
+*.swo
 
 # PyInstaller & Build files
 build/
 dist/
-Output/
 *.spec
+
+# OS Files
+.DS_Store
+Thumbs.db
