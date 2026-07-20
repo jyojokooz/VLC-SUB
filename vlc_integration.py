@@ -49,20 +49,54 @@ def launch_vlc_preview(video_path, srt_path):
 
 def apply_subtitle_to_vlc(app, subtitle_path, success_message, video_path=None):
     def _execute():
+        import shutil
+        import os
+        from utils import clean_path
+        import tkinter.messagebox as messagebox
+
+        subtitle_to_signal = subtitle_path
+        saved_next_to_video = False
+        
+        # 1. Attempt to save a copy NEXT TO THE VIDEO for auto-loading in the future
         if video_path and os.path.exists(video_path):
-            # Launch VLC seamlessly
-            launch_vlc_preview(video_path, subtitle_path)
-            # Show success prompt AFTER commanding VLC to open
-            messagebox.showinfo("✅ Success", f"{success_message}\n\n▶️ Subtitle sent to VLC Player!")
-        else:
             try:
-                if os.name == 'nt':
-                    cf = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
-                    cmd = f'explorer /select,"{clean_path(subtitle_path)}"'
-                    subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=cf)
+                video_dir = os.path.dirname(video_path)
+                sub_name = os.path.basename(subtitle_path)
+                target_sub_path = os.path.join(video_dir, sub_name)
+                
+                # Copy the file to the video's directory if it's not already there
+                if os.path.abspath(subtitle_path) != os.path.abspath(target_sub_path):
+                    shutil.copy2(subtitle_path, target_sub_path)
+                
+                subtitle_to_signal = target_sub_path
+                saved_next_to_video = True
             except Exception:
+                # If the video folder is read-only (like a DVD), skip copying
                 pass
-            messagebox.showinfo("✅ Success", f"{success_message}\n\n📌 TO APPLY IN VLC:\nThe file is highlighted in Explorer.\nDRAG & DROP it into your VLC window!")
+
+        # 2. Write to signal file for VLC Lua Extension to hot-load seamlessly
+        try:
+            appdata = os.environ.get('APPDATA', '')
+            if appdata:
+                signal_dir = os.path.join(appdata, 'UniversalSubtitles')
+                os.makedirs(signal_dir, exist_ok=True)
+                signal_file = os.path.join(signal_dir, 'apply_sub.txt')
+                
+                with open(signal_file, 'w', encoding='utf-8') as f:
+                    f.write(clean_path(subtitle_to_signal))
+        except Exception:
+            pass
+
+        # 3. Show success prompt
+        msg = f"{success_message}\n\n"
+        msg += "▶️ Subtitle sent to VLC Player seamlessly!\n"
+        if saved_next_to_video:
+            msg += "💾 A copy was saved next to your video for future auto-loading.\n\n"
+        else:
+            msg += "\n"
+        msg += "Tip: If it doesn't appear automatically, click 'Apply Latest Subtitle' in your VLC Extension."
+        
+        app.after(0, lambda: messagebox.showinfo("✅ Success", msg))
 
     app.after(0, _execute)
 

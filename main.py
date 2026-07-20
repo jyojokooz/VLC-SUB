@@ -2,41 +2,27 @@ import os
 import warnings
 import multiprocessing
 
-# MUST BE ADDED FOR WINDOWS EXECUTABLES USING ML/THREADS
 if __name__ == '__main__':
     multiprocessing.freeze_support()
 
 warnings.simplefilter("ignore")
-os.environ["HF_HUB_DISABLE_IMPLICIT_TOKEN_WARNING"] = "1"
 os.environ["PYTHONWARNINGS"] = "ignore"
 
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk, colorchooser
 import threading
 import subprocess
-import concurrent.futures
 import sys
 import re
 
-# Try to suppress huggingface_hub warnings
-try:
-    import huggingface_hub.utils.logging
-    huggingface_hub.utils.logging.set_verbosity_error()
-except Exception:
-    pass
-
-# Custom Modular Imports
 import ust_settings as config
 from utils import clean_path, format_timestamp, parse_srt, get_available_subtitles, detect_paired_file, generate_ass_content, resource_path, get_ffmpeg_path
-from engines import transcribe_audio_chunk, transcribe_offline, translate_text, translate_batch, detect_sync_offset, check_offline_available
 
-# UPDATED: We now import get_vlc_ext_path
+# Cleaned up imports (Removed offline references)
+from engines import transcribe_audio_chunk, translate_batch, detect_sync_offset
 from vlc_integration import launch_vlc_preview, apply_subtitle_to_vlc, install_vlc_extension, remove_vlc_extension, get_vlc_ext_path
 from ui_windows import show_srt_preview, show_style_preview, open_history
-
-# Secure API Key Storage
 from security import save_api_key, load_api_key
-
 
 # ============================================================
 # HELPER / CALLBACKS
@@ -65,19 +51,15 @@ def run_generation():
     target_lang      = gen_lang_var.get()
     api_key          = api_key_var.get().strip()
     provider         = provider_var.get()
+    custom_url       = custom_url_var.get().strip()
     romanize         = gen_romanize_var.get()
     source_lang_name = gen_source_lang_var.get()
     source_lang_code = config.WHISPER_LANGUAGES.get(source_lang_name)
-    is_offline       = "Offline" in provider
-    offline_model_name_ui = offline_model_var.get()
 
     if not video_path: return messagebox.showerror("Error", "Please select a video file!")
     if not os.path.exists(video_path): return messagebox.showerror("Error", "Video file not found!")
-
-    # API key only required for cloud providers
-    if not is_offline:
-        if not api_key: return messagebox.showerror("Error", "Please enter your API Key!")
-        save_api_key(api_key)
+    if not api_key: return messagebox.showerror("Error", "Please enter your API Key!")
+    save_api_key(api_key)
 
     def _task():
         try:
@@ -102,7 +84,7 @@ def run_generation():
                 if proc.returncode != 0:
                     raise Exception(f"FFmpeg failed. Is the file a valid video?\n\n{proc.stderr.decode('utf-8', errors='ignore')[-400:]}")
             except FileNotFoundError:
-                raise Exception("ffmpeg.exe not found! Make sure ffmpeg.exe is in the app folder.")
+                raise Exception("ffmpeg.exe not found! Please make sure the app was installed correctly.")
 
             chunks = sorted([f for f in os.listdir(config.TEMP_DIR) if f.endswith('.m4a')])
             if not chunks:
@@ -112,25 +94,17 @@ def run_generation():
             for i, chunk in enumerate(chunks):
                 lang_info = f" ({source_lang_name})" if source_lang_code else " (Auto-Detect)"
 
-                if is_offline:
-                    # Offline: use faster-whisper locally
-                    model_name = config.OFFLINE_MODEL_SIZES.get(offline_model_name_ui, "medium")
-                    update_status(f"🖥️ Transcribing Part {i+1}/{len(chunks)} locally{lang_info}...")
-                    update_progress(i, len(chunks), "parts")
-                    ai_data = transcribe_offline(
-                        os.path.join(config.TEMP_DIR, chunk),
-                        model_size=model_name,
-                        source_lang=source_lang_code,
-                        status_callback=update_status,
-                        progress_callback=update_progress
-                    )
-                else:
-                    # Cloud API: Groq or OpenAI
-                    update_status(f"☁️ Transcribing Part {i+1}/{len(chunks)}{lang_info}...")
-                    update_progress(i, len(chunks), "parts")
-                    ai_data = transcribe_audio_chunk(
-                        os.path.join(config.TEMP_DIR, chunk), provider, api_key, source_lang_code
-                    )
+                # AI Transcription
+                update_status(f"☁️ Transcribing Part {i+1}/{len(chunks)}{lang_info} via {provider}...")
+                update_progress(i, len(chunks), "parts")
+                
+                ai_data = transcribe_audio_chunk(
+                    os.path.join(config.TEMP_DIR, chunk), 
+                    provider, 
+                    api_key, 
+                    source_lang_code,
+                    custom_url
+                )
 
                 offset = i * config.AUDIO_SEGMENT_TIME
                 for seg in ai_data.get("segments", []):
@@ -138,7 +112,7 @@ def run_generation():
                     if text:
                         all_segments.append({"start": seg["start"] + offset, "end": seg["end"] + offset, "text": text})
 
-            if not all_segments: raise Exception("No speech detected.")
+            if not all_segments: raise Exception("No speech detected in this video. Please ensure the video contains spoken words.")
 
             target_code = config.LANGUAGES.get(target_lang, "en")
             if target_code != "en":
@@ -163,7 +137,6 @@ def run_generation():
             update_progress(100, 100, "%")
             populate_all_tabs(srt_path)
             
-            # Apply subtitle to VLC
             apply_subtitle_to_vlc(app, srt_path, f"✅ Subtitles Generated!\n{len(all_segments)} lines | {target_lang}", video_path)
 
         except Exception as e:
@@ -189,7 +162,6 @@ def run_online_search():
             out_path = fetch_online_subtitle(video_path, target_code, update_status)
             if out_path:
                 populate_all_tabs(out_path)
-                # Apply subtitle to VLC
                 apply_subtitle_to_vlc(app, out_path, f"✅ Online Subtitle Downloaded!\n{target_lang}", video_path)
         except Exception as e:
             app.after(0, lambda: messagebox.showerror("Search Error", str(e)))
@@ -198,7 +170,6 @@ def run_online_search():
             app.after(0, lambda: fast_dl_btn.config(state=tk.NORMAL))
             
     threading.Thread(target=_task, daemon=True).start()
-
 
 def run_translation():
     srt_path    = clean_path(trans_srt_var.get().strip())
@@ -234,7 +205,6 @@ def run_translation():
             update_progress(100, 100, "%")
             populate_all_tabs(save_path)
             
-            # Apply subtitle to VLC
             apply_subtitle_to_vlc(app, save_path, f"✅ Translation Finished!\n{len(segments)} lines → {target_lang}{note}", clean_path(gen_video_var.get()))
         except Exception as e:
             app.after(0, lambda: messagebox.showerror("Translation Error", str(e)))
@@ -242,7 +212,6 @@ def run_translation():
         finally:
             app.after(0, lambda: trans_btn.config(state=tk.NORMAL))
     threading.Thread(target=_task, daemon=True).start()
-
 
 def run_auto_sync():
     srt_path   = clean_path(sync_srt_var.get().strip())
@@ -267,7 +236,6 @@ def run_auto_sync():
         finally:
             app.after(0, lambda: auto_sync_btn.config(state=tk.NORMAL, text="🔍 Auto Detect Offset"))
     threading.Thread(target=_task, daemon=True).start()
-
 
 def run_sync():
     srt_path = clean_path(sync_srt_var.get().strip())
@@ -295,7 +263,6 @@ def run_sync():
             update_progress(100, 100, "%")
             populate_all_tabs(save_path)
             
-            # Apply subtitle to VLC
             apply_subtitle_to_vlc(app, save_path, f"✅ Sync Applied!\nOffset: {offset_val:+.2f} seconds", clean_path(gen_video_var.get()))
         except Exception as e:
             app.after(0, lambda: messagebox.showerror("Sync Error", str(e)))
@@ -304,14 +271,12 @@ def run_sync():
             app.after(0, lambda: sync_btn.config(state=tk.NORMAL))
     threading.Thread(target=_task, daemon=True).start()
 
-
 def pick_color(var, btn):
     initial = var.get() if var.get().startswith('#') else '#ffffff'
     result  = colorchooser.askcolor(color=initial, title="Pick Color")
     if result and result[1]:
         var.set(result[1])
         btn.config(bg=result[1], fg="white" if result[1].lower() in ['#000000','#111111','#222222','#333333'] else "black")
-
 
 def run_export_ass():
     srt_path = clean_path(custom_srt_var.get().strip())
@@ -344,7 +309,6 @@ def run_export_ass():
             update_status("✅ Styled ASS subtitle exported!")
             update_progress(100, 100, "%")
             
-            # Apply subtitle to VLC
             apply_subtitle_to_vlc(app, ass_path, "✅ Styled Subtitle Exported as .ASS", clean_path(gen_video_var.get()))
         except Exception as e:
             app.after(0, lambda: messagebox.showerror("Export Error", str(e)))
@@ -352,7 +316,6 @@ def run_export_ass():
         finally:
             app.after(0, lambda: export_ass_btn.config(state=tk.NORMAL))
     threading.Thread(target=_task, daemon=True).start()
-
 
 def on_video_change(*args):
     v_path = gen_video_var.get().strip()
@@ -396,9 +359,9 @@ if __name__ == '__main__':
               selectbackground=[('readonly', config.VLC_ORANGE)], selectforeground=[('readonly', 'black')])
     style.configure("Orange.Horizontal.TProgressbar", background=config.VLC_ORANGE, troughcolor="white", bordercolor="white", lightcolor=config.VLC_ORANGE, darkcolor=config.VLC_ORANGE)
 
-    provider_var      = tk.StringVar(value="Offline (Local - No API Key)")
-    offline_model_var = tk.StringVar(value=config.DEFAULT_OFFLINE_MODEL)
+    provider_var      = tk.StringVar(value="Groq (Lightning Fast)")
     api_key_var       = tk.StringVar(value=load_api_key())
+    custom_url_var    = tk.StringVar(value="https://api.openai.com/v1/audio/transcriptions")
 
     gen_video_var     = tk.StringVar()
     gen_lang_var      = tk.StringVar(value="English")
@@ -467,13 +430,14 @@ if __name__ == '__main__':
 
     # Tab 1
     tk.Label(frame_gen, text="Provider & API Key:", bg=config.PANEL_BG, fg="white", font=("Segoe UI", 9)).pack(pady=(12, 2))
-    provider_cb = ttk.Combobox(frame_gen, textvariable=provider_var, values=["Offline (Local - No API Key)", "Groq (Lightning Fast)", "OpenAI (Standard)"], state="readonly", width=40)
+    provider_cb = ttk.Combobox(frame_gen, textvariable=provider_var, values=["Groq (Lightning Fast)", "OpenAI (Standard)", "Custom API (OpenAI Format)"], state="readonly", width=40)
     provider_cb.pack()
 
     dynamic_frame = tk.Frame(frame_gen, bg=config.PANEL_BG)
     dynamic_frame.pack(pady=4)
 
     f_api = tk.Frame(dynamic_frame, bg=config.PANEL_BG)
+    f_api.pack()
     tk.Entry(f_api, textvariable=api_key_var, show="*", width=35, bg=config.DARK_BG, fg="white", insertbackground="white", border=0).pack(side=tk.LEFT, ipady=3, padx=(0, 5))
 
     def on_save_key():
@@ -486,95 +450,19 @@ if __name__ == '__main__':
 
     tk.Button(f_api, text="💾 Save", bg="#333", fg="white", relief=tk.FLAT, command=on_save_key, padx=5).pack(side=tk.LEFT)
 
-    f_model_container = tk.Frame(dynamic_frame, bg=config.PANEL_BG)
-    f_model = tk.Frame(f_model_container, bg=config.PANEL_BG)
-    f_model.pack()
-    tk.Label(f_model, text="Model Size:", bg=config.PANEL_BG, fg="#ccc", font=("Segoe UI", 9)).pack(side=tk.LEFT, padx=(0, 5))
-    ttk.Combobox(f_model, textvariable=offline_model_var, values=list(config.OFFLINE_MODEL_SIZES.keys()), state="readonly", width=25).pack(side=tk.LEFT, padx=(0, 5))
-
-    def on_download_model():
-        model_name_ui = offline_model_var.get()
-        model_size = config.OFFLINE_MODEL_SIZES.get(model_name_ui, "medium")
-        
-        def _dl_task():
-            config.CANCEL_DOWNLOAD = False
-            app.after(0, lambda: update_progress(0, 100))
-            app.after(0, lambda: dl_btn.config(state=tk.DISABLED))
-            app.after(0, lambda: del_btn.config(state=tk.DISABLED))
-            app.after(0, lambda: cancel_btn.config(state=tk.NORMAL))
-            
-            try:
-                from engines import download_offline_model
-                success = download_offline_model(model_size, update_status, update_progress)
-                if success:
-                    app.after(0, lambda: messagebox.showinfo("Success", f"Model '{model_size}' downloaded successfully!"))
-            except Exception as e:
-                if "cancelled" in str(e).lower():
-                    pass  
-                else:
-                    app.after(0, lambda: messagebox.showerror("Download Error", str(e)))
-            finally:
-                app.after(0, lambda: dl_btn.config(state=tk.NORMAL))
-                app.after(0, lambda: del_btn.config(state=tk.NORMAL))
-                app.after(0, lambda: cancel_btn.config(state=tk.DISABLED))
-                
-        threading.Thread(target=_dl_task, daemon=True).start()
-
-    def on_cancel_download():
-        config.CANCEL_DOWNLOAD = True
-        dl_btn.config(state=tk.NORMAL)
-        del_btn.config(state=tk.NORMAL)
-        cancel_btn.config(state=tk.DISABLED)
-        update_status("Download cancelled.")
-        update_progress(0, 100)
-
-    def on_delete_model():
-        model_name_ui = offline_model_var.get()
-        model_size = config.OFFLINE_MODEL_SIZES.get(model_name_ui, "medium")
-        
-        if messagebox.askyesno("Confirm Delete", f"Are you sure you want to delete the '{model_size}' model?\nYou will have to download it again to use offline transcription."):
-            try:
-                from engines import delete_offline_model
-                deleted = delete_offline_model(model_size)
-                if deleted:
-                    messagebox.showinfo("Success", f"Model '{model_size}' deleted successfully.")
-                else:
-                    messagebox.showinfo("Info", f"Model '{model_size}' not found or already deleted.")
-            except Exception as e:
-                messagebox.showerror("Error", str(e))
-
-    dl_btn = tk.Button(f_model, text="📥 Download", bg="#333", fg="white", relief=tk.FLAT, font=("Segoe UI", 8), command=on_download_model, padx=5)
-    dl_btn.pack(side=tk.LEFT, padx=(0, 5))
-    cancel_btn = tk.Button(f_model, text="⏹ Cancel", bg="#333", fg="white", relief=tk.FLAT, font=("Segoe UI", 8), command=on_cancel_download, padx=5, state=tk.DISABLED)
-    cancel_btn.pack(side=tk.LEFT, padx=(0, 5))
-    del_btn = tk.Button(f_model, text="🗑️ Delete", bg="#333", fg="#ff4444", relief=tk.FLAT, font=("Segoe UI", 8), command=on_delete_model, padx=5)
-    del_btn.pack(side=tk.LEFT)
-
-    model_loc_path = os.path.join(os.path.expanduser("~"), ".cache", "universalsubtitles", "models")
-    f_loc = tk.Frame(f_model_container, bg=config.PANEL_BG)
-    f_loc.pack(pady=(4, 0))
-    model_loc_label = tk.Label(f_loc, text=f"Location: {model_loc_path}", bg=config.PANEL_BG, fg="#777", font=("Segoe UI", 7))
-    model_loc_label.pack(side=tk.LEFT)
-
-    def _open_folder():
-        if os.path.exists(model_loc_path):
-            os.startfile(model_loc_path)
-        else:
-            os.makedirs(model_loc_path, exist_ok=True)
-            os.startfile(model_loc_path)
-
-    tk.Button(f_loc, text="📂 Open Folder", bg="#444", fg="white", relief=tk.FLAT, font=("Segoe UI", 7), command=_open_folder, padx=4, pady=0).pack(side=tk.LEFT, padx=(5,0))
+    f_custom = tk.Frame(dynamic_frame, bg=config.PANEL_BG)
+    tk.Label(f_custom, text="API URL:", bg=config.PANEL_BG, fg="#ccc", font=("Segoe UI", 8)).pack(side=tk.LEFT)
+    tk.Entry(f_custom, textvariable=custom_url_var, width=32, bg=config.DARK_BG, fg="white", insertbackground="white", border=0).pack(side=tk.LEFT, padx=5, ipady=2)
 
     def update_dynamic_ui(*args):
-        if "Offline" in provider_var.get():
-            f_api.pack_forget()
-            f_model_container.pack()
+        if "Custom" in provider_var.get():
+            f_custom.pack(pady=(4, 0))
         else:
-            f_model_container.pack_forget()
-            f_api.pack()
+            f_custom.pack_forget()
 
     provider_var.trace_add("write", update_dynamic_ui)
     update_dynamic_ui()  
+    
     tk.Label(frame_gen, text="Select Video:", bg=config.PANEL_BG, fg="white", font=("Segoe UI", 9)).pack(pady=(6, 2))
     f1 = tk.Frame(frame_gen, bg=config.PANEL_BG); f1.pack()
     tk.Entry(f1, textvariable=gen_video_var, width=33, bg=config.DARK_BG, fg="white", border=0).pack(side=tk.LEFT, padx=5, ipady=3)

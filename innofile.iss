@@ -1,5 +1,5 @@
 #define MyAppName "Universal AI Subtitle Translator"
-#define MyAppVersion "4.0.2.0"
+#define MyAppVersion "4.0.3.0"
 #define MyAppPublisher "Joel S Raphael"
 #define MyAppExeName "UniversalSubtitles.exe"
 
@@ -36,9 +36,18 @@ Source: "logo.ico"; DestDir: "{app}"; Flags: ignoreversion
 ; ---> NEW LINE: Install the VLC Lua Extension automatically <---
 Source: "universal_subtitles.lua"; DestDir: "{userappdata}\vlc\lua\extensions"; Flags: ignoreversion
 
-[Icons]
-; Keep ONLY the Start Menu shortcut. 
-Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\logo.ico"
+[Registry]
+; Register custom URI scheme so the Lua script can launch the app directly (Fallback Protection)
+Root: HKCU; Subkey: "Software\Classes\universalsubtitles"; ValueType: string; ValueData: "URL:Universal Subtitles Protocol"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\universalsubtitles"; ValueType: string; ValueName: "URL Protocol"; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\universalsubtitles\shell\open\command"; ValueType: string; ValueData: """{app}\{#MyAppExeName}"" ""%1"""; Flags: uninsdeletekey
+
+; ----------------------------------------------------------------------
+; FIX FOR MS STORE (Policy 10.1.1.11):
+; The [Icons] section has been DELETED entirely. 
+; The Microsoft Store wrapper will automatically generate the Start Menu 
+; icon for you. Creating one here causes a duplicate and gets the app rejected.
+; ----------------------------------------------------------------------
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent

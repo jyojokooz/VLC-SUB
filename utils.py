@@ -135,17 +135,51 @@ def get_ffmpeg_path():
     """Foolproof method to find ffmpeg.exe whether running as script or compiled .exe"""
     import sys, os
     
-    # 1. If running as compiled PyInstaller app (onedir mode)
+    paths_to_check = []
+    
+    # 1. Using sys.executable (Bundle Root)
     if getattr(sys, 'frozen', False):
         exe_dir = os.path.dirname(sys.executable)
-        path = os.path.join(exe_dir, "ffmpeg.exe")
-        if os.path.exists(path): 
-            return path
-            
-    # 2. Check local script directory (Development mode)
-    path = os.path.join(os.path.abspath("."), "ffmpeg.exe")
-    if os.path.exists(path): 
-        return path
+        paths_to_check.extend([
+            os.path.join(exe_dir, "bin", "ffmpeg.exe"),
+            os.path.join(exe_dir, "ffmpeg.exe"),
+            os.path.join(exe_dir, "_internal", "bin", "ffmpeg.exe"),
+            os.path.join(exe_dir, "_internal", "ffmpeg.exe"),
+        ])
         
-    # 3. Fallback to system PATH
+        # If executed via App Alias, sys.executable might be in LocalAppData\Microsoft\WindowsApps
+        # We can use __file__ to get the real path to utils.pyc
+        try:
+            real_dir = os.path.dirname(os.path.abspath(__file__))
+            paths_to_check.extend([
+                os.path.join(real_dir, "bin", "ffmpeg.exe"),
+                os.path.join(real_dir, "ffmpeg.exe"),
+                os.path.join(real_dir, "..", "bin", "ffmpeg.exe"),
+                os.path.join(real_dir, "..", "ffmpeg.exe"),
+            ])
+        except Exception:
+            pass
+
+    # 2. Using sys._MEIPASS (For PyInstaller onefile or 6.0+ onedir)
+    try:
+        meipass = sys._MEIPASS
+        paths_to_check.extend([
+            os.path.join(meipass, "bin", "ffmpeg.exe"),
+            os.path.join(meipass, "ffmpeg.exe"),
+        ])
+    except Exception:
+        pass
+
+    # 3. Current working directory (Dev mode)
+    paths_to_check.extend([
+        os.path.join(os.path.abspath("."), "bin", "ffmpeg.exe"),
+        os.path.join(os.path.abspath("."), "ffmpeg.exe"),
+    ])
+
+    # Find first valid path
+    for p in paths_to_check:
+        if os.path.exists(p):
+            return p
+            
+    # Fallback to system PATH
     return "ffmpeg"
