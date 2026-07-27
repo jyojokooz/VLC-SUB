@@ -4,7 +4,7 @@ import os
 OUTPUT_FILE = 'file.txt'
 
 # Add or remove file extensions you consider "important"
-ALLOWED_EXTENSIONS = {'.py', '.html', '.css', '.js', '.iss', '.spec', '.gitignore'}
+ALLOWED_EXTENSIONS = {'.py', '.html', '.css', '.js', '.iss', '.spec', '.gitignore', '.json', '.md'}
 
 # Folders to completely ignore (build artifacts, envs, deps, assets, etc.)
 IGNORED_DIRS = {

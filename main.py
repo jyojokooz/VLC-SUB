@@ -23,6 +23,7 @@ from engines import transcribe_audio_chunk, translate_batch, detect_sync_offset
 from vlc_integration import launch_vlc_preview, apply_subtitle_to_vlc, install_vlc_extension, remove_vlc_extension, get_vlc_ext_path
 from ui_windows import show_srt_preview, show_style_preview, open_history
 from security import save_api_key, load_api_key
+from reframing import reframe_video
 
 # ============================================================
 # HELPER / CALLBACKS
@@ -213,6 +214,33 @@ def run_translation():
             app.after(0, lambda: trans_btn.config(state=tk.NORMAL))
     threading.Thread(target=_task, daemon=True).start()
 
+def run_reframe():
+    video_path = clean_path(gen_video_var.get().strip())
+    target_ratio = reframe_ratio_var.get()
+    mode = reframe_mode_var.get()
+
+    if not video_path or not os.path.exists(video_path):
+        return messagebox.showerror("Error", "Please select a valid video file!")
+
+    def _task():
+        try:
+            app.after(0, lambda: reframe_btn.config(state=tk.DISABLED, text="Reframing..."))
+            update_status(f"✂️ Reframing video to {target_ratio} ({mode})...")
+            update_progress(0, 100, "Reframing")
+            
+            out_path = reframe_video(video_path, target_ratio, mode)
+            
+            update_status(f"✅ Reframe Done! Saved to {os.path.basename(out_path)}")
+            update_progress(100, 100, "%")
+            app.after(0, lambda: messagebox.showinfo("Reframing Complete", f"Saved successfully to:\n{out_path}"))
+            
+        except Exception as e:
+            app.after(0, lambda: messagebox.showerror("Reframing Error", str(e)))
+            update_status("Error occurred.")
+        finally:
+            app.after(0, lambda: reframe_btn.config(state=tk.NORMAL, text="✂️ Reframe Video"))
+    threading.Thread(target=_task, daemon=True).start()
+
 def run_auto_sync():
     srt_path   = clean_path(sync_srt_var.get().strip())
     video_path = clean_path(gen_video_var.get().strip())
@@ -357,7 +385,7 @@ if __name__ == '__main__':
     style.map('TCombobox', fieldbackground=[('readonly', 'white'), ('focus', 'white')],
               foreground=[('readonly', 'black'), ('focus', 'black')],
               selectbackground=[('readonly', config.VLC_ORANGE)], selectforeground=[('readonly', 'black')])
-    style.configure("Orange.Horizontal.TProgressbar", background=config.VLC_ORANGE, troughcolor="white", bordercolor="white", lightcolor=config.VLC_ORANGE, darkcolor=config.VLC_ORANGE)
+    style.configure("Orange.Horizontal.TProgressbar", background=config.VLC_ORANGE, troughcolor=config.PANEL_BG, bordercolor=config.DARK_BG, lightcolor=config.VLC_ORANGE, darkcolor=config.VLC_ORANGE)
 
     provider_var      = tk.StringVar(value="Groq (Lightning Fast)")
     api_key_var       = tk.StringVar(value=load_api_key())
@@ -383,6 +411,8 @@ if __name__ == '__main__':
     custom_outline_sz_var = tk.IntVar(value=2)
     custom_shadow_var     = tk.IntVar(value=1)
     custom_position_var   = tk.StringVar(value="bottom")
+    reframe_ratio_var     = tk.StringVar(value="9:16")
+    reframe_mode_var      = tk.StringVar(value="Blurred Background (Professional)")
     progress_var = tk.IntVar(value=0)
     gen_video_var.trace_add("write", on_video_change)
 
@@ -419,14 +449,14 @@ if __name__ == '__main__':
             if i == idx: frame.grid(row=0, column=0, sticky="nsew")
             else: frame.grid_forget()
 
-    tab_labels = ["1. Generate (AI)", "2. Translate", "3. Sync", "4. Customize"]
+    tab_labels = ["1. Generate (AI)", "2. Translate", "3. Sync", "4. Customize", "5. Reframe (New)"]
     tab_btns = [tk.Button(tab_frame, text=t, relief=tk.FLAT, width=13, command=lambda idx=i: show_tab(idx)) for i, t in enumerate(tab_labels)]
     for btn in tab_btns: btn.pack(side=tk.LEFT, padx=2)
 
     cc = tk.Frame(app, bg=config.PANEL_BG, bd=1, relief=tk.SOLID); cc.pack(fill=tk.BOTH, expand=True, padx=20, pady=5)
     cc.grid_rowconfigure(0, weight=1); cc.grid_columnconfigure(0, weight=1)
-    frame_gen, frame_trans, frame_sync, frame_custom = tk.Frame(cc, bg=config.PANEL_BG), tk.Frame(cc, bg=config.PANEL_BG), tk.Frame(cc, bg=config.PANEL_BG), tk.Frame(cc, bg=config.PANEL_BG)
-    frames = [frame_gen, frame_trans, frame_sync, frame_custom]
+    frame_gen, frame_trans, frame_sync, frame_custom, frame_reframe = tk.Frame(cc, bg=config.PANEL_BG), tk.Frame(cc, bg=config.PANEL_BG), tk.Frame(cc, bg=config.PANEL_BG), tk.Frame(cc, bg=config.PANEL_BG), tk.Frame(cc, bg=config.PANEL_BG)
+    frames = [frame_gen, frame_trans, frame_sync, frame_custom, frame_reframe]
 
     # Tab 1
     tk.Label(frame_gen, text="Provider & API Key:", bg=config.PANEL_BG, fg="white", font=("Segoe UI", 9)).pack(pady=(12, 2))
@@ -573,6 +603,23 @@ if __name__ == '__main__':
     tk.Button(row_custom, text="🖥 Style", bg="#1a2a1a", fg="#4CAF50", relief=tk.FLAT, font=("Segoe UI", 9, "bold"), padx=6, pady=6, command=lambda: show_style_preview(app, style_vars)).pack(side=tk.LEFT, padx=(3, 0))
     tk.Button(row_custom, text="▶ VLC", bg="#2a2a2a", fg="#4CAF50", relief=tk.FLAT, font=("Segoe UI", 9, "bold"), padx=6, pady=6, command=preview_ass_in_vlc).pack(side=tk.LEFT, padx=(3, 0))
     tk.Label(frame_custom, text="ASS format = full styling in VLC", bg=config.PANEL_BG, fg="#555", font=("Segoe UI", 8)).pack()
+
+    # Tab 5
+    tk.Label(frame_reframe, text="Select Video for Reframing:", bg=config.PANEL_BG, fg="white", font=("Segoe UI", 9)).pack(pady=(12, 2))
+    fr1 = tk.Frame(frame_reframe, bg=config.PANEL_BG); fr1.pack()
+    reframe_video_cb = ttk.Combobox(fr1, textvariable=gen_video_var, state="normal", width=42); reframe_video_cb.pack(side=tk.LEFT, padx=5)
+    tk.Button(fr1, text="Browse", command=lambda: browse_video(gen_video_var), bg="#333", fg="white", relief=tk.FLAT).pack(side=tk.LEFT)
+    
+    fr2 = tk.Frame(frame_reframe, bg=config.PANEL_BG); fr2.pack(pady=10)
+    tk.Label(fr2, text="Target Ratio:", bg=config.PANEL_BG, fg="#ccc", font=("Segoe UI", 9)).pack(side=tk.LEFT, padx=(0, 5))
+    ttk.Combobox(fr2, textvariable=reframe_ratio_var, values=["16:9", "9:16", "1:1", "4:5", "3:4", "21:9"], state="readonly", width=10).pack(side=tk.LEFT, padx=(0, 15))
+    
+    tk.Label(fr2, text="Mode:", bg=config.PANEL_BG, fg="#ccc", font=("Segoe UI", 9)).pack(side=tk.LEFT, padx=(0, 5))
+    ttk.Combobox(fr2, textvariable=reframe_mode_var, values=["Blurred Background (Professional)", "Center Crop (Fill)"], state="readonly", width=32).pack(side=tk.LEFT)
+    
+    tk.Label(frame_reframe, text="Perfect for YouTube Shorts, TikTok, and Instagram Reels", bg=config.PANEL_BG, fg="#777", font=("Segoe UI", 8)).pack(pady=(0, 10))
+    reframe_btn = tk.Button(frame_reframe, text="✂️ Reframe Video", bg=config.VLC_ORANGE, fg="black", font=("Segoe UI", 10, "bold"), relief=tk.FLAT, command=run_reframe)
+    reframe_btn.pack(pady=5, ipadx=10, ipady=4)
 
     bot = tk.Frame(app, bg=config.DARK_BG); bot.pack(fill=tk.X, padx=20, pady=(0, 10))
     ttk.Progressbar(bot, variable=progress_var, maximum=100, length=520, mode='determinate', style="Orange.Horizontal.TProgressbar").pack()
