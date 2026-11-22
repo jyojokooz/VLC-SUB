@@ -14,7 +14,7 @@ import time
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                                QHBoxLayout, QLabel, QPushButton, QComboBox, 
                                QLineEdit, QCheckBox, QStackedWidget, QProgressBar,
-                               QFileDialog, QMessageBox, QFrame, QScrollArea, QListWidget, QListWidgetItem)
+                               QFileDialog, QMessageBox, QFrame, QScrollArea, QListWidget, QListWidgetItem, QSlider)
 from PySide6.QtCore import Qt, QTimer, Signal, QObject, QMimeData, QUrl
 from PySide6.QtGui import QIcon, QFont, QColor, QDrag
 
@@ -53,6 +53,7 @@ class WorkerSignals(QObject):
     finished = Signal()
     populate_tabs = Signal(str)
     sync_offset_detected = Signal(str, str)
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -143,7 +144,52 @@ class MainWindow(QMainWindow):
         self.player.file_dropped.connect(self.load_dropped_video)
         center_layout.addWidget(self.player, stretch=1)
 
-        # Timeline
+        # --- NEW: VLC-like Video Progress Slider ---
+        video_slider_layout = QHBoxLayout()
+        video_slider_layout.setContentsMargins(0, 5, 0, 5)
+
+        self.time_current_lbl = QLabel("00:00")
+        self.time_current_lbl.setStyleSheet("color: #aaa; font-size: 11px; min-width: 40px;")
+        self.time_current_lbl.setAlignment(Qt.AlignCenter)
+
+        self.video_slider = QSlider(Qt.Horizontal)
+        self.video_slider.setRange(0, 1000)
+        self.video_slider.setStyleSheet("""
+            QSlider::groove:horizontal {
+                border: 1px solid #333;
+                height: 6px;
+                background: #222;
+                border-radius: 3px;
+            }
+            QSlider::sub-page:horizontal {
+                background: #ff9900;
+                border-radius: 3px;
+            }
+            QSlider::handle:horizontal {
+                background: #fff;
+                border: 1px solid #111;
+                width: 12px;
+                margin-top: -3px;
+                margin-bottom: -3px;
+                border-radius: 6px;
+            }
+        """)
+        self.is_slider_pressed = False
+        self.video_slider.sliderPressed.connect(self.slider_pressed)
+        self.video_slider.sliderReleased.connect(self.slider_released)
+        self.video_slider.sliderMoved.connect(self.slider_moved)
+
+        self.time_total_lbl = QLabel("00:00")
+        self.time_total_lbl.setStyleSheet("color: #aaa; font-size: 11px; min-width: 40px;")
+        self.time_total_lbl.setAlignment(Qt.AlignCenter)
+
+        video_slider_layout.addWidget(self.time_current_lbl)
+        video_slider_layout.addWidget(self.video_slider, stretch=1)
+        video_slider_layout.addWidget(self.time_total_lbl)
+        center_layout.addLayout(video_slider_layout)
+        # -------------------------------------------
+
+        # Subtitle Timeline (Kept exactly as it was)
         self.timeline = TimelineWidget()
         self.timeline.setFixedHeight(80)
         self.timeline.seek_requested.connect(self.player.set_time)
@@ -219,6 +265,33 @@ class MainWindow(QMainWindow):
         right_layout.addWidget(self.progress_lbl)
 
         main_layout.addWidget(right_panel)
+
+    def format_time(self, ms):
+        s = int(ms / 1000)
+        h = s // 3600
+        m = (s % 3600) // 60
+        s = s % 60
+        if h > 0:
+            return f"{h:02d}:{m:02d}:{s:02d}"
+        return f"{m:02d}:{s:02d}"
+
+    def slider_pressed(self):
+        self.is_slider_pressed = True
+
+    def slider_released(self):
+        self.is_slider_pressed = False
+        dur = self.player.get_length()
+        if dur > 0:
+            pos = self.video_slider.value()
+            target_time = int((pos / 1000.0) * dur)
+            self.player.set_time(target_time)
+            self.timeline.set_current_time(target_time)
+
+    def slider_moved(self, position):
+        dur = self.player.get_length()
+        if dur > 0:
+            ms = int((position / 1000.0) * dur)
+            self.time_current_lbl.setText(self.format_time(ms))
 
     def switch_tab(self, idx):
         for i, btn in enumerate(self.tab_btns):
@@ -457,165 +530,64 @@ class MainWindow(QMainWindow):
         title = QLabel("<b>⚡ Fast Download Subtitles</b>")
         title.setStyleSheet("font-size: 15px; color: #ff9900;")
         l.addWidget(title)
-        l.addWidget(QLabel("Auto-download the best synced subtitle for your loaded video from the internet.", wordWrap=True))
+        l.addWidget(QLabel("Auto-download the best perfectly synced subtitle for your loaded video directly from online databases.", wordWrap=True))
         l.addSpacing(12)
 
         l.addWidget(QLabel("Language:"))
         self.ws_lang = QComboBox()
-        LANG_MAP = {
-            "English": "eng", "French": "fra", "Spanish": "spa", "German": "deu",
-            "Italian": "ita", "Portuguese": "por", "Arabic": "ara", "Chinese": "zho",
-            "Japanese": "jpn", "Korean": "kor", "Hindi": "hin", "Tamil": "tam",
-            "Russian": "rus", "Turkish": "tur", "Dutch": "nld", "Polish": "pol",
-            "Indonesian": "ind", "Romanian": "ron"
-        }
-        self.ws_lang_map = LANG_MAP
-        self.ws_lang.addItems(list(LANG_MAP.keys()))
+        self.ws_lang.addItems(sorted(config.LANGUAGES.keys()))
+        self.ws_lang.setCurrentText("English")
         l.addWidget(self.ws_lang)
+        
+        l.addSpacing(10)
 
-        # Fast Download button — does search + download in one click
-        self.ws_fast_btn = QPushButton("⚡ Fast Download Best Subtitle")
+        self.ws_fast_btn = QPushButton("🌐 Fast Online Download")
         self.ws_fast_btn.setProperty("class", "primary")
         self.ws_fast_btn.setMinimumHeight(40)
         self.ws_fast_btn.clicked.connect(self.run_fast_download)
         l.addWidget(self.ws_fast_btn)
 
         self.ws_status_lbl = QLabel("Load a video first, then click Fast Download.")
-        self.ws_status_lbl.setStyleSheet("color: #aaa; font-size: 11px; padding: 4px;")
+        self.ws_status_lbl.setStyleSheet("color: #aaa; font-size: 12px; padding: 10px; background: #222; border-radius: 5px; margin-top: 10px;")
         self.ws_status_lbl.setWordWrap(True)
         l.addWidget(self.ws_status_lbl)
 
-        l.addSpacing(8)
-        l.addWidget(QLabel("All Results — double-click any to download & load:"))
-
-        self.ws_results_list = QListWidget()
-        self.ws_results_list.setStyleSheet("""
-            QListWidget {
-                background-color: #1e1e1e;
-                border: 1px solid #333;
-                border-radius: 5px;
-                padding: 5px;
-                outline: none;
-            }
-            QListWidget::item { padding: 6px; border-bottom: 1px solid #2a2a2a; color: #ccc; }
-            QListWidget::item:hover { background-color: #2a2a2a; }
-            QListWidget::item:selected { background-color: #ff9900; color: black; }
-        """)
-        self.ws_results_list.itemDoubleClicked.connect(self.download_web_sub)
-        l.addWidget(self.ws_results_list)
+        l.addStretch()
 
         self.stack.addWidget(w)
 
     def run_fast_download(self):
         video_path = self.gen_video_path.text().strip()
+        target_lang = self.ws_lang.currentText()
+        
         if not video_path or not os.path.exists(video_path):
             QMessageBox.warning(self, "No Video", "Please load a video first using the AI Generate tab or drag a video onto the player.")
             return
 
-        lang_name = self.ws_lang.currentText()
-        lang_code = self.ws_lang_map.get(lang_name, "eng")
-
         self.ws_fast_btn.setEnabled(False)
-        self.ws_results_list.clear()
-        self.ws_status_lbl.setText("🔍 Searching subtitle databases...")
-        self._ws_results_data = []
+        self.ws_status_lbl.setText("🔍 Scanning video hash and searching online databases...")
 
         def _task():
             try:
-                from subliminal import list_subtitles, download_subtitles, Video
-                from babelfish import Language
-                import pysubs2
-
-                video = Video.fromname(os.path.basename(video_path))
-                langs = {Language(lang_code)}
-
-                # Search all providers
-                subs_found = list_subtitles({video}, langs)
-                subs = subs_found.get(video, [])
-
-                if not subs:
-                    QTimer.singleShot(0, lambda: self._ws_update("❌ No subtitles found online. Try a different language.", enable=True))
-                    return
-
-                # Show results list
-                QTimer.singleShot(0, lambda: self._ws_populate_list(subs, video_path, lang_code))
-
-                # Auto-download the first (best) result
-                QTimer.singleShot(0, lambda: self._ws_update(f"⬇️ Downloading best result (1 of {len(subs)})..."))
-                best = subs[0]
-                download_subtitles([best])
-
-                if best.content:
-                    video_dir = os.path.dirname(video_path)
-                    base = os.path.splitext(os.path.basename(video_path))[0]
-                    out_path = os.path.join(video_dir, f"{base}.{lang_code}.srt")
-                    subs_obj = pysubs2.SSAFile.from_string(best.content.decode('utf-8', errors='replace'))
-                    subs_obj.save(out_path)
-                    QTimer.singleShot(0, lambda: self._ws_load_downloaded(out_path, len(subs)))
-                else:
-                    QTimer.singleShot(0, lambda: self._ws_update("❌ Download failed — subtitle content empty. Try another from the list.", enable=True))
+                from engines import fetch_online_subtitle
+                target_code = config.LANGUAGES.get(target_lang, "en")
+                
+                def status_cb(msg):
+                    self.signals.update_status.emit(msg)
+                    QTimer.singleShot(0, lambda m=msg: self.ws_status_lbl.setText(m))
+                    
+                out_path = fetch_online_subtitle(video_path, target_code, status_cb)
+                if out_path:
+                    QTimer.singleShot(0, lambda: self.ws_status_lbl.setText(f"✅ Downloaded successfully:\n{os.path.basename(out_path)}"))
+                    self.signals.populate_tabs.emit(out_path)
+                    QTimer.singleShot(0, self.refresh_history_list)
             except Exception as e:
-                err = str(e)
-                QTimer.singleShot(0, lambda: self._ws_update(f"❌ Error: {err}", enable=True))
+                self.signals.error.emit(str(e))
+                QTimer.singleShot(0, lambda err=str(e): self.ws_status_lbl.setText(f"❌ Error: {err}"))
+            finally:
+                QTimer.singleShot(0, lambda: self.ws_fast_btn.setEnabled(True))
 
         threading.Thread(target=_task, daemon=True).start()
-
-    def _ws_update(self, msg, enable=False):
-        self.ws_status_lbl.setText(msg)
-        if enable:
-            self.ws_fast_btn.setEnabled(True)
-
-    def _ws_populate_list(self, subs, video_path, lang_code):
-        self._ws_results_data = [(s, video_path, lang_code) for s in subs]
-        self.ws_results_list.clear()
-        for i, s in enumerate(subs):
-            provider = type(s).__name__.replace("Subtitle", "").replace("Com", ".com")
-            title = (getattr(s, 'title', None) or getattr(s, 'release', None)
-                     or getattr(s, 'filename', None) or str(getattr(s, 'subtitle_id', '')))
-            star = "⭐ " if i == 0 else "   "
-            item = QListWidgetItem(f"{star}[{provider}] {title or f'Result #{i+1}'}")
-            item.setData(Qt.UserRole, i)
-            self.ws_results_list.addItem(item)
-
-    def download_web_sub(self, item):
-        if not item: return
-        idx = item.data(Qt.UserRole)
-        if not hasattr(self, '_ws_results_data') or idx >= len(self._ws_results_data):
-            return
-
-        sub, video_path, lang_code = self._ws_results_data[idx]
-        self.ws_status_lbl.setText("⬇️ Downloading selected subtitle...")
-        self.ws_fast_btn.setEnabled(False)
-
-        def _task():
-            try:
-                from subliminal import download_subtitles
-                import pysubs2
-
-                download_subtitles([sub])
-                if sub.content:
-                    video_dir = os.path.dirname(video_path)
-                    base = os.path.splitext(os.path.basename(video_path))[0]
-                    out_path = os.path.join(video_dir, f"{base}.{lang_code}.srt")
-                    subs_obj = pysubs2.SSAFile.from_string(sub.content.decode('utf-8', errors='replace'))
-                    subs_obj.save(out_path)
-                    QTimer.singleShot(0, lambda: self._ws_load_downloaded(out_path, None))
-                else:
-                    QTimer.singleShot(0, lambda: self._ws_update("❌ Empty content. Try another result.", enable=True))
-            except Exception as e:
-                err = str(e)
-                QTimer.singleShot(0, lambda: self._ws_update(f"❌ Error: {err}", enable=True))
-
-        threading.Thread(target=_task, daemon=True).start()
-
-    def _ws_load_downloaded(self, path, total):
-        msg = f"✅ Downloaded & loaded! ({total} results available above)" if total else "✅ Downloaded & loaded!"
-        self.ws_status_lbl.setText(msg)
-        self.ws_fast_btn.setEnabled(True)
-        self.populate_all_tabs(path)
-        self.refresh_history_list()
-
-
 
     # --- UI Helpers ---
 
@@ -695,6 +667,13 @@ class MainWindow(QMainWindow):
             dur = self.player.get_length()
             if dur > 0:
                 self.timeline.set_duration(dur)
+                
+                # Update Video Slider if not actively being dragged
+                if not getattr(self, 'is_slider_pressed', False):
+                    self.video_slider.setValue(int((t / dur) * 1000))
+                    self.time_current_lbl.setText(self.format_time(t))
+                    self.time_total_lbl.setText(self.format_time(dur))
+
             self.timeline.set_current_time(t)
 
             # If playing just started and we have a pending subtitle, apply it
@@ -1099,6 +1078,7 @@ class MainWindow(QMainWindow):
             self.set_status("Launched external VLC preview")
         except Exception as e:
             self.show_error(f"Failed to launch external VLC. Is it installed? {e}")
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

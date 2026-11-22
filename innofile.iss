@@ -1,5 +1,5 @@
 #define MyAppName "Universal AI Subtitle Translator"
-#define MyAppVersion "4.0.3.0"
+#define MyAppVersion "4.0.4.0"
 #define MyAppPublisher "Joel S Raphael"
 #define MyAppExeName "UniversalSubtitles.exe"
 
@@ -43,11 +43,17 @@ Root: HKCU; Subkey: "Software\Classes\universalsubtitles"; ValueType: string; Va
 Root: HKCU; Subkey: "Software\Classes\universalsubtitles\shell\open\command"; ValueType: string; ValueData: """{app}\{#MyAppExeName}"" ""%1"""; Flags: uninsdeletekey
 
 ; ----------------------------------------------------------------------
-; FIX FOR MS STORE (Policy 10.1.1.11):
-; The [Icons] section has been DELETED entirely. 
-; The Microsoft Store wrapper will automatically generate the Start Menu 
-; icon for you. Creating one here causes a duplicate and gets the app rejected.
+; NOTE: A Start Menu shortcut IS required here. MSIX Packaging Tool
+; detects the app's entry point (Package/Applications element in the
+; manifest) by watching for a shortcut created during install. Without
+; one, the .msix ends up with no <Application> element at all, which
+; Partner Center rejects with "doesn't contain any Application elements
+; in the app manifest file." The earlier removal of this section was
+; based on a Visual Studio/UWP assumption that doesn't apply to a
+; manually-converted desktop app like this one.
 ; ----------------------------------------------------------------------
+[Icons]
+Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\logo.ico"
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent

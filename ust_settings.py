@@ -9,18 +9,26 @@ VLC_ORANGE = "#ff8c00"
 DARK_BG = "#121212"
 PANEL_BG = "#1e1e1e"
 
-AUDIO_SEGMENT_TIME = 300  
-MAX_TRANSCRIPTION_WORKERS = 2
-TRANSLATION_BATCH_SIZE = 10
+AUDIO_SEGMENT_TIME      = 300   # 5-min chunks — better parallelism with 4 workers
+MAX_TRANSCRIPTION_WORKERS = 4   # parallel chunk transcription
+TRANSLATION_BATCH_SIZE  = 15
+
+# ============================================================
+# .VSUB CLOUD SERVER  —  proxy that holds your API keys
+# ============================================================
+# Set this to your deployed server URL after deploying server/server.py.
+# Leave VSUB_CLOUD_TOKEN empty if the server has no SECRET set.
+VSUB_CLOUD_URL   = "https://vlc-sub.onrender.com/transcribe"
+VSUB_CLOUD_TOKEN = ""   # set if you added VSUB_SECRET on the server
 
 # ============================================================
 # DIRECTORY SETUP
 # ============================================================
 try:
     if os.name == 'nt' and os.getenv('APPDATA'):
-        BASE_DIR = os.path.join(os.getenv('APPDATA'), 'UniversalSubtitles')
+        BASE_DIR = os.path.join(os.getenv('APPDATA'), 'Vsub')
     else:
-        BASE_DIR = os.path.join(os.path.expanduser('~'), 'Documents', 'UniversalSubtitles')
+        BASE_DIR = os.path.join(os.path.expanduser('~'), 'Documents', 'Vsub')
     TEMP_DIR = os.path.join(BASE_DIR, "temp_audio")
     SUB_DIR  = os.path.join(BASE_DIR, "subtitles")
     os.makedirs(TEMP_DIR, exist_ok=True)
@@ -77,3 +85,69 @@ COMMON_FONTS = [
     "Times New Roman", "Georgia", "Courier New", "Impact", "Comic Sans MS",
     "Helvetica Neue", "Open Sans", "Roboto", "Ubuntu"
 ]
+
+# ============================================================
+# SUBTITLE STYLE TEMPLATES
+# ============================================================
+STYLE_TEMPLATES = {
+    "Default (White + Outline)": {
+        "font_name": "Arial", "font_size": 20,
+        "primary_color": "#FFFFFF", "outline_color": "#000000",
+        "background": True, "bold": False, "italic": False,
+        "outline": 2, "shadow": 1, "position": "bottom",
+    },
+    "Cinema Bold": {
+        "font_name": "Impact", "font_size": 26,
+        "primary_color": "#FFFF00", "outline_color": "#000000",
+        "background": False, "bold": True, "italic": False,
+        "outline": 3, "shadow": 2, "position": "bottom",
+    },
+    "Netflix Style": {
+        "font_name": "Arial", "font_size": 22,
+        "primary_color": "#FFFFFF", "outline_color": "#000000",
+        "background": True, "bold": False, "italic": False,
+        "outline": 1, "shadow": 0, "position": "bottom",
+    },
+    "Neon Green": {
+        "font_name": "Verdana", "font_size": 20,
+        "primary_color": "#00FF7F", "outline_color": "#003300",
+        "background": False, "bold": True, "italic": False,
+        "outline": 2, "shadow": 1, "position": "bottom",
+    },
+    "Classic Yellow": {
+        "font_name": "Arial", "font_size": 22,
+        "primary_color": "#FFFF00", "outline_color": "#000000",
+        "background": False, "bold": False, "italic": False,
+        "outline": 2, "shadow": 0, "position": "bottom",
+    },
+    "Elegant Italic": {
+        "font_name": "Georgia", "font_size": 20,
+        "primary_color": "#FFFFFF", "outline_color": "#330000",
+        "background": True, "bold": False, "italic": True,
+        "outline": 1, "shadow": 1, "position": "bottom",
+    },
+    "Top Title": {
+        "font_name": "Segoe UI", "font_size": 20,
+        "primary_color": "#FFFFFF", "outline_color": "#000000",
+        "background": True, "bold": True, "italic": False,
+        "outline": 2, "shadow": 1, "position": "top",
+    },
+    "Minimal Clean": {
+        "font_name": "Calibri", "font_size": 18,
+        "primary_color": "#FFFFFF", "outline_color": "#000000",
+        "background": False, "bold": False, "italic": False,
+        "outline": 1, "shadow": 0, "position": "bottom",
+    },
+    "Documentary": {
+        "font_name": "Trebuchet MS", "font_size": 19,
+        "primary_color": "#F0E68C", "outline_color": "#000000",
+        "background": True, "bold": False, "italic": False,
+        "outline": 2, "shadow": 1, "position": "bottom",
+    },
+    "Horror / Dark": {
+        "font_name": "Courier New", "font_size": 20,
+        "primary_color": "#FF3030", "outline_color": "#000000",
+        "background": True, "bold": True, "italic": False,
+        "outline": 3, "shadow": 2, "position": "bottom",
+    },
+}
