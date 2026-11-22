@@ -1,0 +1,21 @@
+# Render.com deployment config (free tier)
+# Push your server/ folder to GitHub then connect to Render.
+services:
+  - type: web
+    name: vsub-cloud
+    env: python
+    region: singapore   # closest to India
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: VSUB_GROQ_KEYS
+        sync: false   # set manually in Render dashboard (never commit keys!)
+      - key: VSUB_OPENAI_KEYS
+        sync: false
+      - key: VSUB_SECRET
+        sync: false
+      - key: VSUB_IP_LIMIT_PER_HOUR
+        value: "30"
+      - key: VSUB_MAX_FILE_MB
+        value: "25"
